@@ -1,12 +1,19 @@
 #!/usr/bin/env node
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const { glob } = require('glob');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { glob } from 'glob';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const PORT = 3000;
+/** @type {string[]} */
 let imageFiles = []; // Relative paths
+/** @type {string[]} */
 let absoluteImagePaths = []; // Absolute paths for display
 let baseDir = '';
 
@@ -24,6 +31,10 @@ const globPattern = args[0];
 // Supported image extensions
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']);
 
+/**
+ * @param {string} filename
+ * @returns {boolean}
+ */
 function isImageFile(filename) {
     const ext = path.extname(filename).toLowerCase();
     return imageExtensions.has(ext);
@@ -55,11 +66,15 @@ async function findImages() {
         console.log(`Starting server at http://localhost:${PORT}`);
         console.log('Press Ctrl+C to stop the server\n');
     } catch (error) {
-        console.error('Error finding images:', error.message);
+        console.error(
+            'Error finding images:',
+            error instanceof Error ? error.message : String(error)
+        );
         process.exit(1);
     }
 }
 
+/** @type {{ [key: string]: string }} */
 const mimeTypes = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
@@ -108,7 +123,7 @@ const server = http.createServer((req, res) => {
     }
 
     // Serve individual images
-    if (req.url.startsWith('/image/')) {
+    if (req.url && req.url.startsWith('/image/')) {
         const requestedPath = decodeURIComponent(req.url.substring(7));
 
         // Security: ensure the requested file is in our image list

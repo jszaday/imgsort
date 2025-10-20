@@ -2,6 +2,7 @@
     "name": "imgsort",
     "version": "1.0.0",
     "description": "A local utility for quickly sorting images into keep/discard categories",
+    "type": "module",
     "main": "server.js",
     "scripts": {
         "start": "node server.js",

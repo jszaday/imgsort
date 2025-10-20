@@ -204,6 +204,38 @@
                 font-size: 12px;
                 margin-top: 10px;
             }
+
+            .copy-btn {
+                background: #555;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                margin-left: 10px;
+                transition: background 0.2s;
+            }
+
+            .copy-btn:hover {
+                background: #666;
+            }
+
+            .copy-btn.copied {
+                background: #4caf50;
+            }
+
+            .results-section h3 {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .section-title {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
         </style>
     </head>
     <body>
@@ -238,17 +270,30 @@
                 <h2>Sorting Complete!</h2>
 
                 <div class="results-section keep">
-                    <h3>Keep (<span id="keepCount">0</span>)</h3>
+                    <h3>
+                        <span class="section-title">Keep (<span id="keepCount">0</span>)</span>
+                        <button class="copy-btn" id="copyKeepBtn">Copy</button>
+                    </h3>
                     <ul class="file-list" id="keepList"></ul>
                 </div>
 
                 <div class="results-section discard">
-                    <h3>Discard (<span id="discardCount">0</span>)</h3>
+                    <h3>
+                        <span class="section-title"
+                            >Discard (<span id="discardCount">0</span>)</span
+                        >
+                        <button class="copy-btn" id="copyDiscardBtn">Copy</button>
+                    </h3>
                     <ul class="file-list" id="discardList"></ul>
                 </div>
 
                 <div class="results-section undecided">
-                    <h3>Undecided (<span id="undecidedCount">0</span>)</h3>
+                    <h3>
+                        <span class="section-title"
+                            >Undecided (<span id="undecidedCount">0</span>)</span
+                        >
+                        <button class="copy-btn" id="copyUndecidedBtn">Copy</button>
+                    </h3>
                     <ul class="file-list" id="undecidedList"></ul>
                 </div>
             </div>
@@ -339,11 +384,38 @@
                 document.getElementById('sorter').style.display = 'none';
                 document.getElementById('results').style.display = 'block';
 
+                // Setup copy buttons
+                setupCopyButton('copyKeepBtn', keep);
+                setupCopyButton('copyDiscardBtn', discard);
+                setupCopyButton('copyUndecidedBtn', undecided);
+
                 // Also print to console for easy copying
                 console.log('\n=== SORTING RESULTS ===\n');
                 console.log('KEEP:', keep);
                 console.log('DISCARD:', discard);
                 console.log('UNDECIDED:', undecided);
+            }
+
+            function setupCopyButton(buttonId, files) {
+                const button = document.getElementById(buttonId);
+                button.addEventListener('click', async () => {
+                    const text = files.join('\n');
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        button.textContent = 'Copied!';
+                        button.classList.add('copied');
+                        setTimeout(() => {
+                            button.textContent = 'Copy';
+                            button.classList.remove('copied');
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy:', err);
+                        button.textContent = 'Failed';
+                        setTimeout(() => {
+                            button.textContent = 'Copy';
+                        }, 2000);
+                    }
+                });
             }
 
             // Event listeners
