@@ -1,0 +1,29 @@
+{
+    "name": "imgsort",
+    "version": "1.0.0",
+    "description": "A local utility for quickly sorting images into keep/discard categories",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "typecheck": "tsc --noEmit"
+    },
+    "keywords": [
+        "image",
+        "sort",
+        "utility"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "glob": "^11.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "eslint": "^9.0.0",
+        "prettier": "^3.0.0",
+        "typescript": "^5.0.0"
+    }
+}

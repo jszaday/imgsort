@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Image Sorter</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+                    Cantarell, sans-serif;
+                background: #1a1a1a;
+                color: #ffffff;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+
+            .header {
+                padding: 20px;
+                background: #2a2a2a;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            }
+
+            .filename {
+                font-size: 18px;
+                margin-bottom: 10px;
+                color: #e0e0e0;
+            }
+
+            .progress {
+                font-size: 14px;
+                color: #888;
+            }
+
+            .image-container {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                overflow: hidden;
+            }
+
+            .image-container img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            }
+
+            .controls {
+                padding: 30px 20px;
+                background: #2a2a2a;
+                box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+            }
+
+            .navigation {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+
+            .btn {
+                padding: 12px 24px;
+                font-size: 16px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-weight: 500;
+            }
+
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            }
+
+            .btn:active {
+                transform: translateY(0);
+            }
+
+            .btn-nav {
+                background: #444;
+                color: #fff;
+            }
+
+            .btn-nav:hover {
+                background: #555;
+            }
+
+            .btn-nav:disabled {
+                background: #333;
+                color: #666;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .actions {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+            }
+
+            .btn-keep {
+                background: #4caf50;
+                color: white;
+                flex: 1;
+                max-width: 200px;
+            }
+
+            .btn-keep:hover {
+                background: #45a049;
+            }
+
+            .btn-discard {
+                background: #f44336;
+                color: white;
+                flex: 1;
+                max-width: 200px;
+            }
+
+            .btn-discard:hover {
+                background: #da190b;
+            }
+
+            .status {
+                text-align: center;
+                margin-top: 15px;
+                font-size: 14px;
+                color: #888;
+            }
+
+            .status.keep {
+                color: #4caf50;
+            }
+
+            .status.discard {
+                color: #f44336;
+            }
+
+            .status.undecided {
+                color: #ffa726;
+            }
+
+            .results {
+                padding: 40px;
+                max-width: 800px;
+                margin: 0 auto;
+                overflow-y: auto;
+                height: 100vh;
+            }
+
+            .results h2 {
+                margin-bottom: 20px;
+                color: #e0e0e0;
+            }
+
+            .results-section {
+                margin-bottom: 30px;
+                background: #2a2a2a;
+                padding: 20px;
+                border-radius: 8px;
+            }
+
+            .results-section h3 {
+                margin-bottom: 15px;
+                font-size: 18px;
+            }
+
+            .results-section.keep h3 {
+                color: #4caf50;
+            }
+
+            .results-section.discard h3 {
+                color: #f44336;
+            }
+
+            .results-section.undecided h3 {
+                color: #ffa726;
+            }
+
+            .file-list {
+                list-style: none;
+                font-family: monospace;
+                font-size: 14px;
+            }
+
+            .file-list li {
+                padding: 5px 0;
+                color: #ccc;
+            }
+
+            .help-text {
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="sorter" style="display: flex; flex-direction: column; height: 100vh">
+            <div class="header">
+                <div class="filename" id="filename">Loading...</div>
+                <div class="progress" id="progress">0/0</div>
+            </div>
+
+            <div class="image-container">
+                <img id="image" src="" alt="Image" />
+            </div>
+
+            <div class="controls">
+                <div class="navigation">
+                    <button class="btn btn-nav" id="prevBtn">← Previous</button>
+                    <button class="btn btn-nav" id="nextBtn">Next →</button>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-discard" id="discardBtn">← Discard (Left Arrow)</button>
+                    <button class="btn btn-keep" id="keepBtn">Keep (Right Arrow) →</button>
+                </div>
+
+                <div class="status" id="status">Status: Undecided</div>
+                <div class="help-text">Use arrow keys: Left = Discard, Right = Keep</div>
+            </div>
+        </div>
+
+        <div id="results" style="display: none">
+            <div class="results">
+                <h2>Sorting Complete!</h2>
+
+                <div class="results-section keep">
+                    <h3>Keep (<span id="keepCount">0</span>)</h3>
+                    <ul class="file-list" id="keepList"></ul>
+                </div>
+
+                <div class="results-section discard">
+                    <h3>Discard (<span id="discardCount">0</span>)</h3>
+                    <ul class="file-list" id="discardList"></ul>
+                </div>
+
+                <div class="results-section undecided">
+                    <h3>Undecided (<span id="undecidedCount">0</span>)</h3>
+                    <ul class="file-list" id="undecidedList"></ul>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let images = [];
+            let currentIndex = 0;
+            let decisions = {}; // { index: 'keep' | 'discard' | 'undecided' }
+
+            async function loadImages() {
+                const response = await fetch('/images');
+                images = await response.json();
+
+                images.forEach((_, index) => {
+                    decisions[index] = 'undecided';
+                });
+
+                if (images.length > 0) {
+                    showImage(0);
+                }
+            }
+
+            function showImage(index) {
+                if (index < 0 || index >= images.length) return;
+
+                currentIndex = index;
+                const image = images[index];
+
+                document.getElementById('filename').textContent = image;
+                document.getElementById('progress').textContent = `${index + 1}/${images.length}`;
+                document.getElementById('image').src = `/image/${encodeURIComponent(image)}`;
+
+                updateStatus();
+                updateButtons();
+            }
+
+            function updateStatus() {
+                const status = decisions[currentIndex];
+                const statusEl = document.getElementById('status');
+
+                statusEl.className = `status ${status}`;
+                statusEl.textContent = `Status: ${status.charAt(0).toUpperCase() + status.slice(1)}`;
+            }
+
+            function updateButtons() {
+                document.getElementById('prevBtn').disabled = currentIndex === 0;
+                document.getElementById('nextBtn').disabled = currentIndex === images.length - 1;
+            }
+
+            function setDecision(decision) {
+                decisions[currentIndex] = decision;
+                updateStatus();
+            }
+
+            function navigate(direction) {
+                const newIndex = currentIndex + direction;
+                if (newIndex >= 0 && newIndex < images.length) {
+                    showImage(newIndex);
+                } else if (newIndex >= images.length) {
+                    showResults();
+                }
+            }
+
+            function showResults() {
+                const keep = [];
+                const discard = [];
+                const undecided = [];
+
+                images.forEach((image, index) => {
+                    const decision = decisions[index];
+                    if (decision === 'keep') keep.push(image);
+                    else if (decision === 'discard') discard.push(image);
+                    else undecided.push(image);
+                });
+
+                document.getElementById('keepCount').textContent = keep.length;
+                document.getElementById('discardCount').textContent = discard.length;
+                document.getElementById('undecidedCount').textContent = undecided.length;
+
+                document.getElementById('keepList').innerHTML =
+                    keep.map(f => `<li>${f}</li>`).join('') || '<li>None</li>';
+                document.getElementById('discardList').innerHTML =
+                    discard.map(f => `<li>${f}</li>`).join('') || '<li>None</li>';
+                document.getElementById('undecidedList').innerHTML =
+                    undecided.map(f => `<li>${f}</li>`).join('') || '<li>None</li>';
+
+                document.getElementById('sorter').style.display = 'none';
+                document.getElementById('results').style.display = 'block';
+
+                // Also print to console for easy copying
+                console.log('\n=== SORTING RESULTS ===\n');
+                console.log('KEEP:', keep);
+                console.log('DISCARD:', discard);
+                console.log('UNDECIDED:', undecided);
+            }
+
+            // Event listeners
+            document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
+            document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+
+            document.getElementById('keepBtn').addEventListener('click', () => {
+                setDecision('keep');
+                navigate(1);
+            });
+
+            document.getElementById('discardBtn').addEventListener('click', () => {
+                setDecision('discard');
+                navigate(1);
+            });
+
+            document.addEventListener('keydown', e => {
+                if (document.getElementById('results').style.display !== 'none') return;
+
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        setDecision('discard');
+                        navigate(1);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        setDecision('keep');
+                        navigate(1);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        navigate(-1);
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        navigate(1);
+                        break;
+                }
+            });
+
+            // Load images on page load
+            loadImages();
+        </script>
+    </body>
+</html>
