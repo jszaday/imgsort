@@ -27,7 +27,8 @@ describe('parseArgs', () => {
             followSymlinks: false,
             singleKeyAdvance: false,
             noSingleStoreUnchanged: false,
-            focusMode: 'omnibar',
+            focusMode: 'hotkeys',
+            keepUncategorized: false,
             sessionEnabled: true,
             help: false,
             error: '',
@@ -43,6 +44,7 @@ describe('parseArgs', () => {
             '--no-session',
             '--single-key-advance',
             '--follow-symlinks',
+            '--keep-uncategorized',
             '--no-single-store-unchanged',
         ]);
         expect(a).toMatchObject({
@@ -51,22 +53,19 @@ describe('parseArgs', () => {
             singleKeyAdvance: true,
             noSingleStoreUnchanged: true,
             focusMode: 'hotkeys',
+            keepUncategorized: true,
             sessionEnabled: false,
             positionals: ['dir'],
             error: '',
         });
     });
 
-    it('--no-single-key-advance / --omnibar-focus reset their pair', () => {
-        const a = parseArgs([
-            '--single-key-advance',
-            '--no-single-key-advance',
-            '--hotkey-focus',
-            '--omnibar-focus',
-            'd',
-        ]);
+    it('focus mode defaults to hotkeys; --omnibar-focus flips it; the pair resets', () => {
+        expect(parseArgs(['d']).focusMode).toBe('hotkeys');
+        expect(parseArgs(['--omnibar-focus', 'd']).focusMode).toBe('omnibar');
+        expect(parseArgs(['--omnibar-focus', '--hotkey-focus', 'd']).focusMode).toBe('hotkeys');
+        const a = parseArgs(['--single-key-advance', '--no-single-key-advance', 'd']);
         expect(a.singleKeyAdvance).toBe(false);
-        expect(a.focusMode).toBe('omnibar');
     });
 
     it('accepts --out <v> and --out=v', () => {

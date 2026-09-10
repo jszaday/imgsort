@@ -11,6 +11,12 @@
                 box-sizing: border-box;
             }
 
+            /* `display` rules on component classes otherwise beat the UA
+               [hidden] { display: none }, leaving hidden elements visible. */
+            [hidden] {
+                display: none !important;
+            }
+
             :root {
                 --r: 10px;
                 --r-sm: 6px;
@@ -28,8 +34,11 @@
                 --bg-image: #141414;
                 --bg-code: #1a1a1a;
                 --bg-badge: #222222;
-                --dock-bg: #2f2f2f;
+                --dock-bg: rgba(30, 30, 30, 0.82);
                 --hud-bg: rgba(20, 20, 20, 0.6);
+                --glass: rgba(32, 32, 32, 0.68);
+                --glass-hover: rgba(48, 48, 48, 0.78);
+                --scrim: rgba(0, 0, 0, 0.5);
 
                 --text: #ffffff;
                 --text-dim: #e0e0e0;
@@ -72,8 +81,11 @@
                     --bg-image: #d9d9dd;
                     --bg-code: #f7f7f8;
                     --bg-badge: #e4e4e8;
-                    --dock-bg: #ffffff;
+                    --dock-bg: rgba(255, 255, 255, 0.85);
                     --hud-bg: rgba(255, 255, 255, 0.72);
+                    --glass: rgba(255, 255, 255, 0.78);
+                    --glass-hover: rgba(255, 255, 255, 0.92);
+                    --scrim: rgba(24, 24, 27, 0.4);
 
                     --text: #18181b;
                     --text-dim: #27272a;
@@ -183,35 +195,50 @@
                 }
             }
 
-            #sorter,
             #results {
                 position: relative;
                 z-index: 1;
             }
 
-            #sorter {
-                gap: 12px;
-                padding: 12px;
-            }
-
-            .image-tile {
-                flex: 1;
-                position: relative;
+            /* Bottom of the app z-order: the image, fit to the viewport. */
+            .image-layer {
+                position: fixed;
+                inset: 0;
+                z-index: 1;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 20px;
                 overflow: hidden;
-                background: var(--bg-image);
-                border-radius: var(--r);
+                touch-action: none;
             }
 
-            .image-tile img {
-                max-width: 100%;
-                max-height: 100%;
+            .image-layer img {
+                max-width: 100vw;
+                max-height: 100vh;
                 object-fit: contain;
-                box-shadow: var(--shadow-dock);
-                border-radius: var(--r-sm);
+                user-select: none;
+                -webkit-user-drag: none;
+                transition: transform 0.22s ease;
+            }
+
+            /* All floating chrome, one group so a gesture can hide it at once. */
+            .chrome {
+                position: fixed;
+                inset: 0;
+                z-index: 4;
+                pointer-events: none;
+                transition:
+                    opacity 0.22s ease,
+                    visibility 0.22s ease;
+            }
+
+            .chrome > * {
+                pointer-events: auto;
+            }
+
+            .chrome.hidden {
+                opacity: 0;
+                visibility: hidden;
             }
 
             .dock {
@@ -219,17 +246,40 @@
                 top: 0;
                 left: 0;
                 right: 0;
-                z-index: 5;
                 display: flex;
                 align-items: center;
                 flex-wrap: wrap;
                 gap: 10px 14px;
                 padding: 10px 18px;
                 background: var(--dock-bg);
+                backdrop-filter: blur(10px);
                 border: 1px solid var(--border-soft);
                 border-top: none;
                 border-radius: 0 0 var(--r) var(--r);
                 box-shadow: var(--shadow-dock);
+            }
+
+            .bottom-cluster {
+                position: absolute;
+                left: 50%;
+                bottom: 14px;
+                transform: translateX(-50%);
+                width: min(940px, calc(100vw - 24px));
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .banner-stack {
+                position: absolute;
+                left: 50%;
+                top: 66px;
+                transform: translateX(-50%);
+                width: min(620px, calc(100vw - 24px));
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
             }
 
             .dock-filename {
@@ -346,16 +396,9 @@
                 padding: 4px 8px;
             }
 
-            .session-row {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 14px;
-                margin-top: 10px;
-                font-size: 12px;
-            }
-
             .save-indicator {
+                flex: none;
+                font-size: 12px;
                 color: var(--text-faint);
             }
 
@@ -363,24 +406,35 @@
                 color: var(--accent);
             }
 
-            .link-btn {
-                background: none;
-                border: none;
-                color: var(--text-muted);
-                font-size: 12px;
-                text-decoration: underline;
+            .omnibar-row {
+                display: flex;
+                align-items: stretch;
+                gap: 8px;
+                width: min(620px, 100%);
+            }
+
+            .nav-arrow {
+                flex: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                font-size: 18px;
+                color: var(--text);
+                background: var(--glass);
+                backdrop-filter: blur(10px);
+                border: 1px solid var(--border);
+                border-radius: var(--r);
                 cursor: pointer;
             }
 
-            .link-btn:hover {
-                color: var(--danger);
+            .nav-arrow:hover:not(:disabled) {
+                background: var(--glass-hover);
             }
 
-            .controls {
-                padding: 20px 20px 24px;
-                background: var(--bg-1);
-                border-radius: var(--r);
-                box-shadow: var(--shadow-panel-up);
+            .nav-arrow:disabled {
+                opacity: 0.35;
+                cursor: default;
             }
 
             .omnibar {
@@ -388,10 +442,11 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                max-width: 620px;
-                margin: 0 auto 18px;
+                flex: 1;
+                width: auto;
                 padding: 8px 10px 8px 12px;
-                background: var(--bg-0);
+                background: var(--glass);
+                backdrop-filter: blur(10px);
                 border: 1px solid var(--border);
                 border-radius: var(--r);
             }
@@ -429,7 +484,7 @@
                 position: absolute;
                 left: 0;
                 right: 0;
-                top: calc(100% + 6px);
+                bottom: calc(100% + 6px);
                 z-index: 20;
                 background: var(--bg-1);
                 border: 1px solid var(--border);
@@ -477,59 +532,31 @@
                 font-weight: 600;
             }
 
-            .navigation {
-                display: flex;
-                gap: 15px;
-                justify-content: center;
-                margin-bottom: 20px;
-            }
-
             .btn {
-                padding: 12px 24px;
-                font-size: 16px;
+                padding: 10px 16px;
+                font-size: 15px;
                 border: none;
                 border-radius: var(--r-sm);
                 cursor: pointer;
-                transition: all 0.2s;
+                transition:
+                    background 0.15s,
+                    border-color 0.15s;
                 font-weight: 500;
-            }
-
-            .btn:hover {
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-btn);
-            }
-
-            .btn:active {
-                transform: translateY(0);
-            }
-
-            .btn-nav {
-                background: var(--bg-nav);
-                color: var(--text);
-            }
-
-            .btn-nav:hover {
-                background: var(--bg-nav-hover);
-            }
-
-            .btn-nav:disabled {
-                background: var(--bg-nav-disabled);
-                color: var(--text-faint);
-                cursor: not-allowed;
-                transform: none;
             }
 
             .folders {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 10px;
+                gap: 8px;
                 justify-content: center;
-                max-width: 900px;
-                margin: 0 auto;
+                max-width: 100%;
+                max-height: 42vh;
+                overflow-y: auto;
             }
 
             .btn-folder {
-                background: var(--bg-folder);
+                background: var(--glass);
+                backdrop-filter: blur(10px);
                 color: var(--text);
                 border: 1px solid var(--border);
                 border-radius: var(--r-sm);
@@ -539,7 +566,7 @@
             }
 
             .btn-folder:hover {
-                background: var(--bg-folder-hover);
+                background: var(--glass-hover);
             }
 
             .btn-folder.active {
@@ -559,49 +586,148 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                min-width: 22px;
-                height: 22px;
+                min-width: 20px;
+                height: 20px;
                 padding: 0 4px;
                 border-radius: var(--r-sm);
                 background: var(--bg-badge);
                 color: var(--text-badge);
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 700;
             }
 
-            .btn-new-folder {
-                background: var(--bg-plain);
+            .btn-folder .count {
+                font-variant-numeric: tabular-nums;
+                font-weight: 600;
+                font-size: 13px;
+                color: var(--text-muted);
+            }
+
+            .btn-folder.active .count {
                 color: var(--text);
+            }
+
+            .btn-new-folder {
+                background: var(--glass);
+                backdrop-filter: blur(10px);
+                color: var(--text-dim);
+                border: 1px dashed var(--border);
                 border-radius: var(--r-sm);
             }
 
             .btn-new-folder:hover {
+                background: var(--glass-hover);
+            }
+
+            /* --- in-app popups (replace window.prompt / window.confirm) --- */
+            .popup-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 50;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                background: var(--scrim);
+            }
+
+            .popup {
+                width: min(440px, 100%);
+                max-height: 88vh;
+                overflow-y: auto;
+                padding: 22px;
+                background: var(--bg-1);
+                border: 1px solid var(--border);
+                border-radius: var(--r);
+                box-shadow: var(--shadow-dock);
+            }
+
+            .popup-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--text-dim);
+                margin-bottom: 12px;
+            }
+
+            .popup-body {
+                font-size: 13px;
+                line-height: 1.55;
+                color: var(--text-code);
+            }
+
+            .popup-body input[type='text'] {
+                width: 100%;
+                margin-top: 12px;
+                padding: 8px 10px;
+                background: var(--bg-0);
+                border: 1px solid var(--border);
+                border-radius: var(--r-sm);
+                color: var(--text);
+                font-size: 14px;
+                font-family: inherit;
+            }
+
+            .popup-error {
+                min-height: 16px;
+                margin-top: 6px;
+                font-size: 12px;
+                color: var(--danger);
+            }
+
+            .popup-keys {
+                list-style: none;
+                margin-top: 4px;
+            }
+
+            .popup-keys li {
+                display: flex;
+                gap: 10px;
+                padding: 3px 0;
+            }
+
+            .popup-keys kbd {
+                flex: none;
+                min-width: 78px;
+                font-family: monospace;
+                font-size: 12px;
+                color: var(--text-badge);
+            }
+
+            .popup-foot {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                margin-top: 18px;
+            }
+
+            .popup-foot button {
+                padding: 7px 16px;
+                font-size: 13px;
+                border: 1px solid var(--border);
+                border-radius: var(--r-sm);
+                background: var(--bg-plain);
+                color: var(--text);
+                cursor: pointer;
+            }
+
+            .popup-foot button:hover {
                 background: var(--bg-plain-hover);
             }
 
-            .folder-error {
-                text-align: center;
-                margin-top: 10px;
-                padding: 2px 8px;
-                border-radius: var(--r-sm);
-                font-size: 13px;
-                color: var(--danger);
-                min-height: 18px;
+            .popup-foot button.primary {
+                background: var(--accent);
+                border-color: var(--accent);
+                color: #fff;
             }
 
-            .status {
-                text-align: center;
-                margin-top: 15px;
-                font-size: 14px;
-                color: var(--warn);
+            .popup-foot button.danger {
+                background: var(--danger);
+                border-color: var(--danger);
+                color: #fff;
             }
 
-            .status.trash {
-                color: var(--danger);
-            }
-
-            .status.uncategorized {
-                color: var(--text-muted);
+            .popup-foot button.ghost {
+                background: transparent;
             }
 
             .results {
@@ -812,14 +938,16 @@
             <div class="grid-plane"></div>
         </div>
 
-        <div id="sorter" style="display: flex; flex-direction: column; height: 100vh">
-            <div class="session-banner" id="sessionBanner" hidden></div>
-            <div class="session-banner warn" id="localWarning" hidden></div>
+        <div id="sorter">
+            <div class="image-layer" id="imageLayer">
+                <img id="image" src="" alt="Image" />
+            </div>
 
-            <div class="image-tile">
+            <div class="chrome" id="chrome">
                 <div class="dock">
                     <div class="dock-filename" id="filename" title="">Loading...</div>
                     <div class="dock-progress" id="progress">0 / 0</div>
+                    <span class="save-indicator" id="saveIndicator"></span>
                     <button
                         class="dock-btn"
                         id="undoBtn"
@@ -838,7 +966,7 @@
                     >
                         ↷
                     </button>
-                    <span class="dock-chip" id="focusChip" title="">🔍</span>
+                    <span class="dock-chip" id="focusChip" title="">⌨</span>
                     <button
                         class="hud"
                         id="advanceHud"
@@ -847,49 +975,58 @@
                     >
                         Advance: Manual
                     </button>
-                </div>
-                <img id="image" src="" alt="Image" />
-            </div>
-
-            <div class="controls">
-                <div class="omnibar">
-                    <span class="omnibar-icon" aria-hidden="true">🔍</span>
-                    <input
-                        type="text"
-                        id="omnibar"
-                        class="omnibar-input"
-                        placeholder="Find or create a category…"
-                        autocomplete="off"
-                        autocapitalize="off"
-                        spellcheck="false"
-                    />
                     <button
-                        class="hud omnibar-mode"
-                        id="omnibarMode"
+                        class="dock-btn"
+                        id="helpBtn"
                         type="button"
-                        title="Focus mode. Search: the box grabs focus on every image; type to filter, Esc to release. Hotkeys: bare 1-9 / a-z assign categories; press / to reach the box. Click to switch."
+                        title="Keyboard shortcuts &amp; session (?)"
                     >
-                        🔍 Search
+                        ?
                     </button>
-                    <div class="omnibar-results" id="omnibarResults" hidden></div>
                 </div>
 
-                <div class="navigation">
-                    <button class="btn btn-nav" id="prevBtn">&larr; Previous</button>
-                    <button class="btn btn-nav" id="nextBtn">Next &rarr;</button>
+                <div class="banner-stack">
+                    <div class="session-banner" id="sessionBanner" hidden></div>
+                    <div class="session-banner warn" id="localWarning" hidden></div>
                 </div>
 
-                <div class="folders" id="folders"></div>
+                <div class="bottom-cluster">
+                    <div class="omnibar-row">
+                        <button
+                            class="nav-arrow"
+                            id="prevBtn"
+                            type="button"
+                            title="Previous image (←)"
+                        >
+                            ‹
+                        </button>
+                        <div class="omnibar">
+                            <span class="omnibar-icon" aria-hidden="true">🔍</span>
+                            <input
+                                type="text"
+                                id="omnibar"
+                                class="omnibar-input"
+                                placeholder="Find or create a category…"
+                                autocomplete="off"
+                                autocapitalize="off"
+                                spellcheck="false"
+                            />
+                            <button
+                                class="hud omnibar-mode"
+                                id="omnibarMode"
+                                type="button"
+                                title="Focus mode. Hotkeys: bare 1-9 / a-z assign categories; press / to reach the box. Search: the box keeps focus (grabs it on every image); type to filter, Esc to release. Click to switch."
+                            >
+                                ⌨ Hotkeys
+                            </button>
+                            <div class="omnibar-results" id="omnibarResults" hidden></div>
+                        </div>
+                        <button class="nav-arrow" id="nextBtn" type="button" title="Next image (→)">
+                            ›
+                        </button>
+                    </div>
 
-                <div class="folder-error" id="folderError"></div>
-
-                <div class="status" id="status">Categories: uncategorized</div>
-                <div class="help-text" id="helpText"></div>
-                <div class="session-row" id="sessionRow" hidden>
-                    <span class="save-indicator" id="saveIndicator"></span>
-                    <button class="link-btn" id="clearSessionBtn" type="button">
-                        Clear session
-                    </button>
+                    <div class="folders" id="folders"></div>
                 </div>
             </div>
         </div>
@@ -937,6 +1074,8 @@
                 newCategoryError,
                 isValidNewCategory,
                 folderKeyBadge,
+                countLabels,
+                applyCountDelta,
             } from '/lib/categories.js';
             import { replay } from '/lib/txns.js';
             import { buildOps, lowerPosix, lowerWindows, refKey } from '/lib/script.js';
@@ -967,16 +1106,27 @@
                 out: '.',
                 noSingleStoreUnchanged: false,
                 singleKeyAdvance: false,
-                focusMode: 'omnibar',
+                focusMode: 'hotkeys',
+                keepUncategorized: false,
                 sessionEnabled: true,
                 imageSetHash: '',
             };
             /** @type {'omnibar' | 'hotkeys'} */
-            let focusMode = 'omnibar';
+            let focusMode = 'hotkeys';
             // Ranked omnibar matches currently shown: { name, index } (index = -1 = "create").
             /** @type {{ name: string, index: number }[]} */
             let omniMatches = [];
             let omniHighlight = 0;
+
+            // Live per-label image counts (booru-style). Full recompute on
+            // replay/load; incremental via applyCountDelta on the normal path.
+            /** @type {Map<string, number>} */
+            let labelCounts = new Map();
+
+            /** Options object for lib applyToggle / replay (default-bucket clearing). */
+            function toggleOpts() {
+                return { clearUncategorized: !scriptOptions.keepUncategorized };
+            }
 
             // --- Session / transaction log ------------------------------------
             // Source of truth for the sort: replayTxns() folds these onto the
@@ -1043,13 +1193,16 @@
             }
 
             /**
-             * Toggle a category on image `i` (delegates the set logic to
-             * lib/categories.js `applyToggle`).
+             * Toggle a category on image `i` (set logic in lib/categories.js
+             * `applyToggle`), keeping `labelCounts` current by the delta.
              * @param {number} i
              * @param {string} name
              */
             function toggleCategory(i, name) {
-                assignments[i] = applyToggle(catSet(i), name);
+                const before = catSet(i);
+                const after = applyToggle(before, name, toggleOpts());
+                applyCountDelta(labelCounts, before, after);
+                assignments[i] = after;
             }
 
             /** @param {string} image */
@@ -1073,12 +1226,17 @@
              * currentIndex / the visible image.
              */
             function replayTxns() {
-                const result = replay({ images, discovered: discoveredByPathMap() }, txns);
+                const result = replay(
+                    { images, discovered: discoveredByPathMap() },
+                    txns,
+                    toggleOpts()
+                );
                 folders = result.folders;
                 assignments = {};
                 images.forEach((img, i) => {
                     assignments[i] = result.assignments.get(img) || new Set(['uncategorized']);
                 });
+                labelCounts = countLabels(images.map((_, i) => catSet(i)));
                 renderFolders();
             }
 
@@ -1097,7 +1255,6 @@
             function toggleAndRecord(name) {
                 toggleCategory(currentIndex, name);
                 pushTxn({ t: 'toggle', image: images[currentIndex], category: name });
-                updateStatus();
                 renderFolders();
             }
 
@@ -1329,27 +1486,19 @@
                 showImage(0);
             }
 
-            async function clearSession() {
-                const n = txns.length;
-                if (
-                    !window.confirm(
-                        `Discard all ${n} sorting decision${n === 1 ? '' : 's'} and the saved session?`
-                    )
-                ) {
-                    return;
-                }
+            async function doClearSession() {
                 document.getElementById('localWarning').hidden = true;
                 await discardSavedSession();
                 setSaveIndicator('idle');
             }
 
             async function initSession() {
-                const row = document.getElementById('sessionRow');
+                const ind = document.getElementById('saveIndicator');
                 if (!scriptOptions.sessionEnabled) {
-                    row.hidden = true;
+                    ind.hidden = true;
                     return;
                 }
-                row.hidden = false;
+                ind.hidden = false;
                 setSaveIndicator('idle');
 
                 let remote = {};
@@ -1360,7 +1509,7 @@
                 }
                 if (remote && remote.disabled) {
                     scriptOptions.sessionEnabled = false;
-                    row.hidden = true;
+                    ind.hidden = true;
                     return;
                 }
 
@@ -1399,22 +1548,6 @@
                 return DISPLAY_SEP === '/' ? p : p.split('/').join(DISPLAY_SEP);
             }
 
-            function updateHelpText() {
-                const el = document.getElementById('helpText');
-                const mod = isMacPlatform() ? '⌘' : 'Ctrl';
-                el.textContent =
-                    'Type in the omnibar to fuzzy-find a category (↑/↓ + Enter, or ' +
-                    mod +
-                    '+1-9 to jump to a row); if it is a new name, pick Create. ' +
-                    'Bare 1-9 / a-z toggle a category directly (10-35 use a-z) — an image ' +
-                    'can be in several. In Search mode the omnibar holds focus, so press ' +
-                    'Esc to release it for those keys; in Hotkeys mode press / to reach ' +
-                    'the omnibar. Space / Down = next, Up = previous. ' +
-                    mod +
-                    '+N makes a new category. The Advance pill shows whether a category ' +
-                    'key also advances (it follows your position; click to pin).';
-            }
-
             async function loadImages() {
                 const response = await fetch('/images');
                 const data = await response.json();
@@ -1433,8 +1566,7 @@
                 redoStack = [];
                 replayTxns();
 
-                focusMode = scriptOptions.focusMode === 'hotkeys' ? 'hotkeys' : 'omnibar';
-                updateHelpText();
+                focusMode = scriptOptions.focusMode === 'omnibar' ? 'omnibar' : 'hotkeys';
                 updateFocusModeUI();
                 updateUndoButtons();
                 renderOmnibar();
@@ -1459,93 +1591,82 @@
                 document.getElementById('image').src = `/image/${encodeURIComponent(image)}`;
 
                 updateDock();
-                updateStatus();
-                updateButtons();
+                updateNavArrows();
                 renderFolders();
                 maybeRefocusOmnibar();
                 scheduleSave();
             }
 
-            function updateStatus() {
-                const s = catSet(currentIndex);
-                const statusEl = document.getElementById('status');
-                const cls = s.has('trash')
-                    ? 'trash'
-                    : s.size === 1 && s.has('uncategorized')
-                      ? 'uncategorized'
-                      : '';
-                statusEl.className = `status ${cls}`;
-                statusEl.textContent = `Categories: ${[...s].map(toDisplay).join(', ')}`;
-            }
+            // Category buttons: rebuild the DOM only when the folder list itself
+            // changed; otherwise just refresh active state + live counts.
+            /** @type {{ name: string, el: HTMLButtonElement, countEl: HTMLElement }[]} */
+            let folderButtons = [];
+            let renderedFolderKey = null;
 
-            function updateButtons() {
-                document.getElementById('prevBtn').disabled = currentIndex === 0;
-                document.getElementById('nextBtn').disabled = currentIndex === images.length - 1;
-            }
-
-            function renderFolders() {
+            function rebuildFolderButtons() {
                 const container = document.getElementById('folders');
                 container.innerHTML = '';
+                folderButtons = [];
 
                 folders.forEach((name, i) => {
                     const button = document.createElement('button');
-                    const isTrash = name === 'trash';
-                    button.className = `btn btn-folder${isTrash ? ' trash' : ''}`;
-                    if (catSet(currentIndex).has(name)) {
-                        button.classList.add('active');
-                    }
+                    button.className = `btn btn-folder${name === 'trash' ? ' trash' : ''}`;
 
                     const key = document.createElement('span');
                     key.className = 'key';
                     key.textContent = folderKeyBadge(i, isMacPlatform());
-                    button.appendChild(key);
-                    button.appendChild(document.createTextNode(toDisplay(name)));
 
-                    button.addEventListener('click', () => {
-                        toggleAndRecord(name);
-                    });
+                    const label = document.createElement('span');
+                    label.className = 'label';
+                    label.textContent = toDisplay(name);
+
+                    const count = document.createElement('span');
+                    count.className = 'count';
+
+                    button.append(key, label, count);
+                    button.addEventListener('click', () => toggleAndRecord(name));
                     container.appendChild(button);
+                    folderButtons.push({ name, el: button, countEl: count });
                 });
 
                 if (folders.length < MAX_FOLDERS) {
                     const newButton = document.createElement('button');
                     newButton.className = 'btn btn-new-folder';
-                    newButton.textContent = '+ New folder';
+                    newButton.textContent = '+ New category';
                     newButton.addEventListener('click', createFolder);
                     container.appendChild(newButton);
                 }
+
+                renderedFolderKey = folders.join('\n');
             }
 
-            function setFolderError(message) {
-                document.getElementById('folderError').textContent = message || '';
+            function renderFolders() {
+                if (folders.join('\n') !== renderedFolderKey) rebuildFolderButtons();
+                const cur = catSet(currentIndex);
+                for (const b of folderButtons) {
+                    b.el.classList.toggle('active', cur.has(b.name));
+                    b.countEl.textContent = String(labelCounts.get(b.name) || 0);
+                }
             }
 
             /**
-             * Add a new category and apply it to the current image (its whole
-             * reason for existing right now). No advance — you may be adding
-             * several. Returns whether it was created.
+             * Add a new category and apply it to the current image. No advance.
+             * Returns '' on success or the validation error string.
              * @param {string} name
-             * @returns {boolean}
+             * @returns {string}
              */
             function commitNewCategory(name) {
                 const err = newCategoryError(name, folders);
-                if (err) {
-                    setFolderError(err);
-                    return false;
-                }
+                if (err) return err;
                 folders.push(name);
-                setFolderError('');
                 toggleCategory(currentIndex, name);
                 pushTxn({ t: 'create', name, image: images[currentIndex] });
-                updateStatus();
                 renderFolders();
-                return true;
+                return '';
             }
 
             function createFolder() {
-                const raw = window.prompt('New folder name:');
-                if (raw === null) return;
-                commitNewCategory(raw.trim());
+                openNewCategoryPopup();
             }
 
             /**
@@ -1571,6 +1692,16 @@
                     showResults();
                 }
             }
+
+            function updateNavArrows() {
+                const prev = /** @type {HTMLButtonElement} */ (document.getElementById('prevBtn'));
+                const next = /** @type {HTMLButtonElement} */ (document.getElementById('nextBtn'));
+                if (prev) prev.disabled = currentIndex <= 0;
+                if (next) next.disabled = images.length === 0;
+            }
+
+            document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
+            document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
 
             // ---- Category omnibar ------------------------------------------------
             // fuzzyScore comes from lib/fuzzy.js.
@@ -1647,9 +1778,7 @@
                 const m = omniMatches[i];
                 if (!m) return;
                 if (m.index === -1) {
-                    if (commitNewCategory(m.name)) {
-                        renderFolders();
-                    }
+                    commitNewCategory(m.name); // omnibar already validated the name
                 } else {
                     pressCategory(m.name);
                 }
@@ -1970,8 +2099,291 @@
                 };
             }
 
-            document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
-            document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+            // --- in-app popups (replace window.prompt / window.confirm) --------
+
+            /** @type {HTMLElement | null} */
+            let openPopupEl = null;
+
+            /**
+             * @param {{
+             *   title: string,
+             *   body: (root: HTMLElement) => void,
+             *   buttons: { label: string, kind?: 'primary'|'danger'|'ghost',
+             *              act?: () => boolean | void }[]
+             * }} opts  a button `act` returning true keeps the popup open
+             */
+            function openPopup(opts) {
+                closePopup();
+                const prevFocus = document.activeElement;
+
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay';
+                const panel = document.createElement('div');
+                panel.className = 'popup';
+                overlay.appendChild(panel);
+
+                const h = document.createElement('div');
+                h.className = 'popup-title';
+                h.textContent = opts.title;
+                const body = document.createElement('div');
+                body.className = 'popup-body';
+                opts.body(body);
+                const foot = document.createElement('div');
+                foot.className = 'popup-foot';
+                panel.append(h, body, foot);
+
+                /** @type {HTMLButtonElement | null} */
+                let primaryBtn = null;
+                /** @type {(() => void) | null} */
+                let cancelAct = null;
+                opts.buttons.forEach(b => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    if (b.kind) btn.className = b.kind;
+                    btn.textContent = b.label;
+                    btn.addEventListener('click', () => {
+                        if (!(b.act && b.act() === true)) closePopup();
+                    });
+                    foot.appendChild(btn);
+                    if (b.kind === 'primary') primaryBtn = btn; // Enter target; never a danger button
+                    if (b.kind === 'ghost' || !b.kind) cancelAct = () => btn.click();
+                });
+
+                const onKey = e => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        if (cancelAct) cancelAct();
+                        else closePopup();
+                    } else if (e.key === 'Enter' && primaryBtn && e.target.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        primaryBtn.click();
+                    } else if (e.key === 'Tab') {
+                        const f = panel.querySelectorAll(
+                            'input, button, [tabindex]:not([tabindex="-1"])'
+                        );
+                        if (!f.length) return;
+                        const first = f[0];
+                        const last = f[f.length - 1];
+                        if (e.shiftKey && document.activeElement === first) {
+                            e.preventDefault();
+                            /** @type {HTMLElement} */ (last).focus();
+                        } else if (!e.shiftKey && document.activeElement === last) {
+                            e.preventDefault();
+                            /** @type {HTMLElement} */ (first).focus();
+                        }
+                    }
+                };
+                overlay.addEventListener('mousedown', e => {
+                    if (e.target === overlay && cancelAct) cancelAct();
+                });
+                document.addEventListener('keydown', onKey, true);
+
+                openPopupEl = overlay;
+                /** @type {*} */ (overlay).__cleanup = () => {
+                    document.removeEventListener('keydown', onKey, true);
+                    if (prevFocus instanceof HTMLElement) prevFocus.focus();
+                };
+                document.body.appendChild(overlay);
+                const focusTarget =
+                    panel.querySelector('input') || panel.querySelector('.ghost, button');
+                if (focusTarget instanceof HTMLElement) focusTarget.focus();
+            }
+
+            function closePopup() {
+                if (!openPopupEl) return;
+                /** @type {*} */ (openPopupEl).__cleanup?.();
+                openPopupEl.remove();
+                openPopupEl = null;
+            }
+
+            function openNewCategoryPopup() {
+                /** @type {HTMLInputElement} */
+                let input;
+                /** @type {HTMLElement} */
+                let errEl;
+                openPopup({
+                    title: 'New category',
+                    body: root => {
+                        const lbl = document.createElement('div');
+                        lbl.textContent = 'Name (no "/" or "\\"; applied to the current image).';
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.autocomplete = 'off';
+                        errEl = document.createElement('div');
+                        errEl.className = 'popup-error';
+                        input.addEventListener('input', () => {
+                            errEl.textContent = '';
+                        });
+                        root.append(lbl, input, errEl);
+                    },
+                    buttons: [
+                        { label: 'Cancel', kind: 'ghost' },
+                        {
+                            label: 'Create',
+                            kind: 'primary',
+                            act: () => {
+                                const err = commitNewCategory(input.value.trim());
+                                if (err) {
+                                    errEl.textContent = err;
+                                    input.focus();
+                                    return true; // keep open
+                                }
+                            },
+                        },
+                    ],
+                });
+            }
+
+            function openClearSessionPopup() {
+                const n = txns.length;
+                openPopup({
+                    title: 'Clear session',
+                    body: root => {
+                        root.textContent =
+                            `Discard all ${n} sorting decision${n === 1 ? '' : 's'} and the ` +
+                            'saved session? This cannot be undone.';
+                    },
+                    buttons: [
+                        { label: 'Cancel', kind: 'ghost' },
+                        {
+                            label: 'Discard',
+                            kind: 'danger',
+                            act: () => {
+                                doClearSession();
+                            },
+                        },
+                    ],
+                });
+            }
+
+            function openKeyboardPopup() {
+                const mod = isMacPlatform() ? '⌘' : 'Ctrl';
+                /** @type {[string, string][]} */
+                const rows = [
+                    ['1-9 / a-z', 'toggle that category on the current image (a-z = 10th+)'],
+                    ['Space / → / ↓', 'next image'],
+                    ['← / ↑', 'previous image'],
+                    ['/', 'focus the omnibar (Esc releases it)'],
+                    ['↑/↓, Enter', 'in the omnibar: move / pick a match'],
+                    [`${mod}+1-9`, 'in the omnibar: jump to that row'],
+                    [`${mod}+N`, 'new category'],
+                    [`${mod}+Z / ${mod}${isMacPlatform() ? '⇧Z' : '+Y'}`, 'undo / redo'],
+                ];
+                openPopup({
+                    title: 'Keyboard & session',
+                    body: root => {
+                        const ul = document.createElement('ul');
+                        ul.className = 'popup-keys';
+                        rows.forEach(([k, d]) => {
+                            const li = document.createElement('li');
+                            const kbd = document.createElement('kbd');
+                            kbd.textContent = k;
+                            const span = document.createElement('span');
+                            span.textContent = d;
+                            li.append(kbd, span);
+                            ul.appendChild(li);
+                        });
+                        const note = document.createElement('p');
+                        note.style.marginTop = '10px';
+                        note.textContent =
+                            focusMode === 'omnibar'
+                                ? 'Focus mode: Search — the omnibar holds focus (grabs it each image).'
+                                : 'Focus mode: Hotkeys — bare keys assign; press / for the omnibar.';
+                        root.append(ul, note);
+                    },
+                    buttons: [
+                        {
+                            label: 'Clear session…',
+                            kind: 'danger',
+                            act: () => {
+                                setTimeout(openClearSessionPopup, 0);
+                            },
+                        },
+                        { label: 'Close', kind: 'ghost' },
+                    ],
+                });
+            }
+
+            // --- gesture-hide: chrome vanishes while a move gesture is active --
+
+            let gestureActive = false;
+            let gestureTimer = null;
+            /** @type {Set<number>} */
+            const activePointers = new Set();
+            let dragStart = null;
+
+            function chromeEl() {
+                return document.getElementById('chrome');
+            }
+
+            function beginGesture() {
+                gestureActive = true;
+                clearTimeout(gestureTimer);
+                chromeEl().classList.add('hidden');
+            }
+
+            function endGesture() {
+                gestureActive = false;
+                clearTimeout(gestureTimer);
+                gestureTimer = setTimeout(() => {
+                    if (!gestureActive) {
+                        chromeEl().classList.remove('hidden');
+                        const img = document.getElementById('image');
+                        img.style.transform = '';
+                    }
+                }, 350);
+            }
+
+            (() => {
+                const layer = document.getElementById('imageLayer');
+                const img = document.getElementById('image');
+
+                layer.addEventListener('pointerdown', e => {
+                    activePointers.add(e.pointerId);
+                    dragStart = { x: e.clientX, y: e.clientY, id: e.pointerId };
+                    try {
+                        layer.setPointerCapture(e.pointerId);
+                    } catch {
+                        /* ignore */
+                    }
+                    if (activePointers.size >= 2) beginGesture();
+                });
+                layer.addEventListener('pointermove', e => {
+                    if (activePointers.size >= 2) {
+                        beginGesture();
+                        return;
+                    }
+                    if (!dragStart || e.pointerId !== dragStart.id) return;
+                    const dx = e.clientX - dragStart.x;
+                    const dy = e.clientY - dragStart.y;
+                    if (!gestureActive && Math.hypot(dx, dy) > 6) beginGesture();
+                    if (gestureActive) {
+                        img.style.transform = `translate(${dx * 0.15}px, ${dy * 0.15}px)`;
+                    }
+                });
+                const up = e => {
+                    activePointers.delete(e.pointerId);
+                    if (dragStart && e.pointerId === dragStart.id) dragStart = null;
+                    if (gestureActive && activePointers.size === 0) endGesture();
+                };
+                layer.addEventListener('pointerup', up);
+                layer.addEventListener('pointercancel', up);
+                layer.addEventListener('lostpointercapture', up);
+
+                layer.addEventListener(
+                    'wheel',
+                    () => {
+                        beginGesture();
+                        clearTimeout(gestureTimer);
+                        gestureTimer = setTimeout(endGesture, 180);
+                    },
+                    { passive: true }
+                );
+                layer.addEventListener('gesturestart', beginGesture);
+                layer.addEventListener('gestureend', endGesture);
+            })();
+
+            // --- chrome wiring -----------------------------------------------
 
             // Advance pill cycles: follow (null) -> pin 'auto' -> pin 'manual' -> follow.
             document.getElementById('advanceHud').addEventListener('click', () => {
@@ -1982,7 +2394,7 @@
 
             document.getElementById('undoBtn').addEventListener('click', undo);
             document.getElementById('redoBtn').addEventListener('click', redoTxn);
-            document.getElementById('clearSessionBtn').addEventListener('click', clearSession);
+            document.getElementById('helpBtn').addEventListener('click', openKeyboardPopup);
 
             document.getElementById('omnibarMode').addEventListener('click', () => {
                 setFocusMode(focusMode === 'omnibar' ? 'hotkeys' : 'omnibar');
@@ -2040,6 +2452,7 @@
             });
 
             document.addEventListener('keydown', e => {
+                if (openPopupEl) return; // popup owns the keyboard while open
                 if (document.getElementById('results').style.display !== 'none') return;
 
                 const platformMod = isMacPlatform() ? e.metaKey : e.ctrlKey;
@@ -2095,10 +2508,12 @@
 
                 switch (e.key) {
                     case 'ArrowUp':
+                    case 'ArrowLeft':
                         e.preventDefault();
                         navigate(-1);
                         break;
                     case 'ArrowDown':
+                    case 'ArrowRight':
                         e.preventDefault();
                         navigate(1);
                         break;

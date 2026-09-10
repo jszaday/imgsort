@@ -7,6 +7,8 @@ import {
     isValidNewCategory,
     folderKey,
     folderKeyBadge,
+    countLabels,
+    applyCountDelta,
 } from '../lib/categories.js';
 
 /** @param {Iterable<string>} it */
@@ -14,7 +16,21 @@ const sorted = it => [...it].sort();
 
 describe('applyToggle', () => {
     it('adds a category', () => {
-        expect(sorted(applyToggle(['uncategorized'], 'faves'))).toEqual(['faves', 'uncategorized']);
+        expect(sorted(applyToggle(['portrait'], 'faves'))).toEqual(['faves', 'portrait']);
+    });
+
+    it('adding a real category clears the default `uncategorized` bucket', () => {
+        expect([...applyToggle(['uncategorized'], 'faves')]).toEqual(['faves']);
+    });
+
+    it('adding `uncategorized` itself does not self-clear', () => {
+        expect(sorted(applyToggle(['faves'], 'uncategorized'))).toEqual(['faves', 'uncategorized']);
+    });
+
+    it('clearUncategorized:false keeps `uncategorized` sticky', () => {
+        expect(
+            sorted(applyToggle(['uncategorized'], 'faves', { clearUncategorized: false }))
+        ).toEqual(['faves', 'uncategorized']);
     });
 
     it('removes a category it already has', () => {
@@ -85,5 +101,50 @@ describe('folderKey / folderKeyBadge', () => {
     });
     it('RESERVED is the two reserved names', () => {
         expect(RESERVED).toEqual(['uncategorized', 'trash']);
+    });
+});
+
+describe('countLabels', () => {
+    it('counts every label across all sets', () => {
+        const counts = countLabels([
+            new Set(['a', 'b']),
+            new Set(['a']),
+            new Set(['trash']),
+            new Set(['a', 'b', 'c']),
+        ]);
+        expect(Object.fromEntries(counts)).toEqual({ a: 3, b: 2, c: 1, trash: 1 });
+    });
+    it('empty input -> empty map', () => {
+        expect(countLabels([]).size).toBe(0);
+    });
+});
+
+describe('applyCountDelta', () => {
+    it('adds new labels, decrements dropped ones, deletes at zero', () => {
+        const counts = new Map([
+            ['a', 2],
+            ['b', 1],
+        ]);
+        applyCountDelta(counts, new Set(['a', 'b']), new Set(['a', 'c']));
+        expect(Object.fromEntries(counts)).toEqual({ a: 2, c: 1 }); // b 1->0 deleted
+    });
+    it('a trash-exclusive swap: many labels out, trash in', () => {
+        const counts = new Map([
+            ['x', 1],
+            ['y', 1],
+            ['trash', 3],
+        ]);
+        applyCountDelta(counts, new Set(['x', 'y']), new Set(['trash']));
+        expect(Object.fromEntries(counts)).toEqual({ trash: 4 });
+    });
+    it('no-op when the set is unchanged', () => {
+        const counts = new Map([['a', 5]]);
+        applyCountDelta(counts, new Set(['a']), new Set(['a']));
+        expect(counts.get('a')).toBe(5);
+    });
+    it('accepts plain iterables, not just Sets', () => {
+        const counts = new Map();
+        applyCountDelta(counts, [], ['a', 'a', 'b']); // duplicate 'a' counted once (Set semantics)
+        expect(Object.fromEntries(counts)).toEqual({ a: 1, b: 1 });
     });
 });

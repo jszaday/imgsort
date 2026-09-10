@@ -25,7 +25,8 @@ let baseDir = '';
 const USAGE =
     'Usage: node server.js [-r|--recursive] [--out <dir>] [--follow-symlinks] ' +
     '[--single-key-advance|--no-single-key-advance] [--no-single-store-unchanged] ' +
-    '[--omnibar-focus|--hotkey-focus] [--no-session] [-h|--help] <directory|glob>';
+    '[--omnibar-focus|--hotkey-focus] [--keep-uncategorized] [--no-session] ' +
+    '[-h|--help] <directory|glob>';
 
 function printUsage() {
     console.error(USAGE);
@@ -61,15 +62,20 @@ function printHelp() {
             '                     image. The on-screen Advance pill shows the effective',
             '                     mode and can pin it either way.',
             '  --omnibar-focus | --hotkey-focus',
-            '                     Sorter-screen focus. --omnibar-focus (default): the',
-            '                     category search box holds focus and grabs it on every',
-            '                     image; type to fuzzy-find, Esc to release for hotkeys.',
-            '                     --hotkey-focus: bare 1-9 / a-z keys drive it and "/"',
-            '                     jumps to the search box. Switchable live in the UI.',
+            '                     Sorter-screen focus. Default (--hotkey-focus): bare',
+            '                     1-9 / a-z keys assign categories and "/" jumps to the',
+            '                     search box. --omnibar-focus instead keeps the search',
+            '                     box focused (grabbing focus on every image) so you',
+            '                     fuzzy-find by typing; Esc releases it. Switchable',
+            '                     live in the UI.',
             '  --no-single-store-unchanged',
             '                     Leave an item untouched (no intern, no reference) when',
             '                     its category set is unchanged from -r discovery. Default:',
             '                     such items are interned and referenced like the rest.',
+            '  --keep-uncategorized',
+            '                     Keep `uncategorized` sticky. By default it is a bucket',
+            '                     that empties itself: adding any real category to an',
+            '                     image also removes `uncategorized` from it.',
             '  --follow-symlinks  Follow symlinked files and directories while scanning',
             '                     (default: symlinks are ignored entirely). A symlinked',
             '                     file is interned by its realpath; symlink loops guarded.',
@@ -100,6 +106,7 @@ const {
     followSymlinks,
     singleKeyAdvance,
     focusMode,
+    keepUncategorized,
     sessionEnabled,
     positionals,
 } = args;
@@ -237,6 +244,7 @@ const server = http.createServer((req, res) => {
                     noSingleStoreUnchanged,
                     singleKeyAdvance,
                     focusMode,
+                    keepUncategorized,
                     sessionEnabled,
                     imageSetHash,
                 },

@@ -26,7 +26,7 @@ npm install
 ```
 Usage: node server.js [-r|--recursive] [--out <dir>] [--follow-symlinks]
                       [--single-key-advance|--no-single-key-advance]
-                      [--no-single-store-unchanged]
+                      [--no-single-store-unchanged] [--keep-uncategorized]
                       [--omnibar-focus|--hotkey-focus] [--no-session]
                       [-h|--help] <directory|glob>
 ```
@@ -47,12 +47,18 @@ pattern. Options are order-independent.
 - `--no-single-store-unchanged` — leave an item in place (no intern, no
   reference) when its category set is unchanged from `-r` discovery. Default:
   every kept item is interned and referenced.
+- `--keep-uncategorized` — keep `uncategorized` sticky. By **default**
+  `uncategorized` is a self-emptying bucket: adding any real category to an
+  image also removes `uncategorized` from that image (same shape as the
+  "adding a real category removes `trash`" rule; only an exact `uncategorized`
+  match is affected — nested `-r` categories like `trip/rome` are independent).
+  With this flag, `uncategorized` behaves like any other label.
 - `--omnibar-focus` / `--hotkey-focus` — sorter-screen focus behavior.
-  `--omnibar-focus` (default): the category omnibar holds focus and re-grabs it
-  on every image, so you fuzzy-find categories by typing; `Esc` releases it so
-  the bare `1`-`9` / `a`-`z` keys work until the next image. `--hotkey-focus`:
-  the omnibar does not auto-focus, the bare keys drive everything, and `/`
-  jumps to the omnibar. Toggle live from the pill at the omnibar's right end.
+  **`--hotkey-focus` (default)**: the omnibar does not auto-focus, the bare
+  `1`-`9` / `a`-`z` keys drive everything, and `/` jumps to the omnibar.
+  `--omnibar-focus`: the omnibar holds focus and re-grabs it on every image, so
+  you fuzzy-find categories by typing; `Esc` releases it so the bare keys work
+  until the next image. Toggle live from the pill at the omnibar's right end.
 - `--follow-symlinks` — follow symlinked files and directories while scanning.
   Default: symlinks are ignored entirely (not collected, not descended). With
   the flag, a symlinked file is interned by its `realpath` and symlink loops
@@ -100,11 +106,14 @@ means the relative paths carry its prefix.
 
 ## Category model
 
-Every image starts in **`uncategorized`**. Each image now holds a **set** of
-categories, not a single one — an image can live in several at once. Two
-categories always exist and are keyed first:
+Every image starts in **`uncategorized`**. Each image holds a **set** of
+categories — it can live in several at once. Two categories always exist and are
+keyed first:
 
-- `1` = **uncategorized** — an ordinary category
+- `1` = **uncategorized** — a **self-emptying default bucket**: adding any real
+  category to an image also drops `uncategorized` from it (disable with
+  `--keep-uncategorized`). Only an exact `uncategorized` match; nested `-r`
+  categories are independent.
 - `2` = **trash** — **exclusive**: adding `trash` clears every other category on
   that image, and adding any real category removes `trash`. A `trash` item is
   interned into the store but gets **no reference** (recoverable, never deleted).
@@ -116,35 +125,52 @@ In **directory + `-r`** mode, every distinct discovered category is added after
 category.
 
 User-created categories come next, in creation order — `⌘N` / `Ctrl+N` or the
-**+ New folder** button (non-empty, no `/` or `\`, not a duplicate, not
-reserved). A newly created category is immediately applied to the current
-image. Discovered categories bypass the separator rule — they legitimately
-contain `/`.
+**+ New category** button opens a small in-app popup (name, inline validation).
+A newly created category is immediately applied to the current image. Discovered
+categories bypass the separator rule — they legitimately contain `/`.
 
 Categories are keyed: the 1st–9th by digits `1`-`9`, the 10th onward by bare
-letters `a`-`z`. Cap is **35** (9 digits + 26 letters). Each button's badge
-shows its key (digits, or an uppercase letter — no modifier glyph). ⌘/Ctrl +
-letter is reserved for actions (`⌘N` / `Ctrl+N` = new category).
+letters `a`-`z`. Cap is **35** (9 digits + 26 letters). Each button shows its
+key badge, name, and a **live count** of how many images currently carry that
+label (booru-style, e.g. `landscape 42`). ⌘/Ctrl + letter is reserved for
+actions (`⌘N` / `Ctrl+N` = new category).
 
 ## Controls
 
+### Sorter-screen layout
+
+The image sits at the **bottom of the app z-order** — fit to the viewport over
+the receding checkerboard backdrop — and all the chrome floats over it:
+
+- a **dock** pinned to the top edge: filename (hover for the full path), the
+  `N / M` counter, the save indicator, `↶` / `↷` undo/redo, the focus-mode
+  chip, the Advance pill, and a **`?`** button that opens the keyboard &
+  session popup.
+- a **bottom cluster**, centered and hugging the bottom edge: the omnibar on
+  top, the category buttons (wrapping, centered) below it. Everything is
+  translucent so the image reads through.
+
+That's the whole sorter screen — image, dock, omnibar, buttons. Navigation is
+by keyboard (Space/↓ next, ↑ previous). The chrome **hides while you drag or
+scroll on the image** (a move gesture) and springs back ~0.35 s after it ends;
+a gesture that starts on a button or the omnibar is a normal interaction.
+
 ### The category omnibar
 
-A permanent search box sits at the top of the controls tile. Type to fuzzy-find
-categories (subsequence match, ranked by consecutive runs, word-boundary starts
-after `/ - _` space, and earliness); `↑`/`↓` move the highlight, `Enter` picks
-it, `⌘`/`Ctrl`+`1`-`9` jump to row N, `Esc` clears then blurs. If what you typed
-is a valid new category name and nothing matches it exactly, the last row is
-`Create "<name>"` — picking it creates the category and applies it to the
-current image. Picking any row routes through the same toggle-and-maybe-advance
-path as the category buttons.
+Type to fuzzy-find categories (subsequence match, ranked by consecutive runs,
+word-boundary starts after `/ - _` space, and earliness); `↑`/`↓` move the
+highlight, `Enter` picks it, `⌘`/`Ctrl`+`1`-`9` jump to row N, `Esc` clears then
+blurs. If what you typed is a valid new category name and nothing matches it
+exactly, the last row is `Create "<name>"` — picking it creates the category and
+applies it to the current image. Picking any row routes through the same
+toggle-and-maybe-advance path as the category buttons.
 
-The pill at the box's right end switches **focus mode** (`🔍 Search` /
-`⌨ Hotkeys`), also set at launch with `--omnibar-focus` / `--hotkey-focus`. In
-Search mode the box keeps focus and re-grabs it on every image (so typing always
-filters; press `Esc` to use the bare hotkeys); in Hotkeys mode the bare keys
-drive everything and `/` jumps to the box. The dock shows a `🔍` / `⌨`
-indicator of the current mode.
+The pill at the box's right end switches **focus mode** (`⌨ Hotkeys` /
+`🔍 Search`), also set at launch with `--hotkey-focus` (default) /
+`--omnibar-focus`. In Hotkeys mode the bare keys drive everything and `/` jumps
+to the box; in Search mode the box keeps focus and re-grabs it on every image
+(so typing always filters; press `Esc` to use the bare hotkeys). The dock shows
+a `⌨` / `🔍` indicator of the current mode.
 
 ### Keyboard Shortcuts
 
@@ -155,15 +181,11 @@ indicator of the current mode.
 - **/**: focus the omnibar · **Esc** in it: clear, then release focus
 - **⌘N** / **Ctrl+N**: create a new category (auto-applied to the current image)
 - **Space** / **Down Arrow**: next image · **Up Arrow**: previous image
+- **?** button (dock): full shortcut list + "Clear session"
 
 ### Advance mode & the Advance pill
 
-The sorter screen is two rounded tiles — the image fills the top one, the
-controls sit below — over a receding checkerboard backdrop. A floating **dock
-bar** clings to the top edge of the image tile with the current filename
-(hover for the full path), the `N / M` progress counter, and the Advance pill.
-
-The pill shows the **effective** advance mode:
+The Advance pill in the dock shows the **effective** advance mode:
 
 - **Auto** — a category key also advances to the next image.
 - **Manual** — a category key only toggles; you advance yourself.
@@ -178,11 +200,18 @@ glyph marks a pinned state; a pinned mode ignores position and the base flag.
 
 ### Mouse Controls
 
-- **Category buttons**: toggle that category (multiple can be active); the
-  selected ones are highlighted
-- **+ New folder**: create a new category (auto-applied to the current image)
-- **Previous/Next Buttons**: navigate between images
+- **Category buttons**: toggle that category (multiple can be active; active
+  ones are highlighted and show a live count)
+- **+ New category**: opens the new-category popup (applied to the current image)
 - **↶ / ↷** (dock): undo / redo the last decision
+- **`?`** (dock): keyboard reference + Clear session
+
+### In-app popups
+
+`imgsort` never uses `window.prompt` / `window.confirm`. New-category, clear-
+session confirm, and the keyboard reference are small focus-trapped popups
+(dimmed backdrop, `Esc` cancels, `Enter` confirms, click-outside cancels),
+theme-tokenized for light and dark.
 
 ## Sessions
 
@@ -197,7 +226,7 @@ powers both undo/redo and resume.
 - **Autosave** — unless started with `--no-session`, every decision and
   navigation is debounced-saved (~0.5s) to `.imgsort-session.json` in the start
   directory (a hidden dotfile; also flagged hidden on Windows). A small
-  `saving… / saved ✓` indicator sits by the Clear link.
+  `saving… / saved ✓` indicator sits in the dock.
 - **Resume** — on the next launch the saved log is **rolled forward onto the
   current scan's base**: saved decisions win, and any decision whose image is no
   longer present is dropped. A banner reports `Resumed N saved decisions`
@@ -205,8 +234,8 @@ powers both undo/redo and resume.
   when some were dropped) with a `Discard & start fresh` action. The pruned log
   is re-saved immediately. The `currentIndex` / frontier / advance-pin restore
   is best-effort.
-- **Clear session** — the link in the controls tile deletes the file (and any
-  browser copy) and resets to the base sort after a confirm.
+- **Clear session** — from the dock `?` popup; deletes the file (and any
+  browser copy) and resets to the base sort after an in-app confirm.
 - **Browser fallback** — if the server can't write the file (read-only dir,
   etc.) imgsort falls back to `localStorage` and shows a dismissible
   `Session saved in this browser only.` strip. That copy is also read on load if
@@ -300,8 +329,10 @@ npm test            # vitest (test/**/*.test.js)
 All four should pass before committing.
 
 The pure, DOM-free logic lives in `lib/*.js` ES modules — `hash.js` (FNV-1a),
-`fuzzy.js` (omnibar ranking), `categories.js` (category-set rules, key badges),
-`txns.js` (`replay()` folds the transaction log onto the discovered base),
+`fuzzy.js` (omnibar ranking), `categories.js` (category-set rules incl.
+`applyToggle`, key badges, and `countLabels` / `applyCountDelta` for the live
+per-label counts), `txns.js` (`replay()` folds the transaction log onto the
+discovered base),
 `script.js` (`buildOps` + the POSIX / Windows lowerers), `scan.js` (`parseArgs`,
 `isImageFile`, `collectFromDir`). `server.js` imports them directly; the browser
 loads them from the `/lib/<name>.js` route, and `index.html`'s inline

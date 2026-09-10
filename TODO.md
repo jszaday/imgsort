@@ -28,6 +28,18 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
   so you can't fuzzy-match a category whose name starts with a digit by typing
   the digit first (minor — arrows/click still reach it; hotkey-focus mode is
   unaffected).
+- Sorter-screen overlay rework: image at the bottom of the app z-order, all
+  chrome floats over it (dock + bottom cluster), chrome hides during a
+  drag/scroll gesture on the image, live booru-style per-label counts
+  (`countLabels`/`applyCountDelta` in `lib/categories.js`, incremental on the
+  normal path), in-app popups replacing `window.prompt`/`window.confirm`,
+  default focus mode flipped to `hotkeys`, `uncategorized` is now a
+  self-emptying bucket (`--keep-uncategorized` to opt out). _(landed)_
+  Prev/Next are back as ‹ › arrows flanking the omnibar; ←/↑ = previous,
+  →/↓/Space = next. No real zoom/pan — the gesture listeners only detect
+  "gesture in progress" and nudge the image a few px for feedback.
+  Fixed: a global `[hidden] { display: none !important }` — component
+  `display` rules were beating the UA rule and showing hidden banners empty.
 
 ## Next
 
@@ -60,6 +72,11 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
 
 ## Later
 
+- Open question — should nested categories sharing a path prefix be mutually
+  exclusive within that subtree (e.g. picking `uncategorized/foo` clears sibling
+  `uncategorized/*`)? Currently they're independent; the reserved bare
+  `uncategorized` is the only path-namespace special case, and a discovered dir
+  literally named `uncategorized` already shadows it.
 - In-app day/night toggle in the dock. The palette is already all CSS custom
   properties (dark base + `prefers-color-scheme: light` override); this would
   add a manual switch (button in the dock) that stamps `data-theme` on `:root`

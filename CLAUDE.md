@@ -83,11 +83,16 @@ automated check. Logic worth testing belongs in `lib/`, not inline.
   runtime dependencies, without discussion (dev deps: `vitest` is in).
 - **Sensible defaults from context, with a manual override always present**
   (e.g. the macOS/POSIX script tab auto-selects by platform but you can switch).
+- **Prefer in-app popups within the app's own z-order over native browser
+  dialogs** (`alert` / `confirm` / `prompt`). A general rule of thumb here.
 - **The coordinator verifies subagent output before reporting it** — read the
   `git diff` and re-run lint/typecheck/format; don't relay an agent's summary
   on trust.
 - **Ask one clarifying question when the design has a real fork**; don't guess
   on decisions that change the shape of the work.
+- **"idk" from the user = capture it as a `TODO.md` entry**, don't press for a
+  decision or build a guess. Note the sane current behavior alongside the open
+  question.
 - **Keep responses terse — act, don't survey.** Decisions and diffs over
   essays; skip option-by-option write-ups unless asked.
 - **Platform expectations matter.** Match the viewer's OS for things a user

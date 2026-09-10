@@ -25,8 +25,15 @@ describe('replay', () => {
         expect(cats(r, 'a.png')).toEqual(['uncategorized']);
     });
 
-    it('applies one toggle', () => {
+    it('applies one toggle (clearing the default uncategorized bucket)', () => {
         const r = replay(base, T([{ t: 'toggle', image: 'a.png', category: 'trip' }]));
+        expect(cats(r, 'a.png')).toEqual(['trip']);
+    });
+
+    it('clearUncategorized:false keeps uncategorized alongside the toggled label', () => {
+        const r = replay(base, T([{ t: 'toggle', image: 'a.png', category: 'trip' }]), {
+            clearUncategorized: false,
+        });
         expect(cats(r, 'a.png')).toEqual(['trip', 'uncategorized']);
     });
 
