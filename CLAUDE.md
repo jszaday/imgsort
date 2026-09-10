@@ -9,6 +9,12 @@ Guidance for Claude Code when working in this repo.
 script) plus the matched image files. Run it with a directory or glob:
 `node server.js -r ./photos`, then open `http://localhost:3000`.
 
+**Single local user only.** No auth; the server serves and writes state
+(`.imgsort-session.json`, the store, the reference tree) into the directory it
+is pointed at — usually the user's project dir. One server = one scan + one
+session file; concurrent users/tabs clobber each other. Never treat it as a
+hostable service; design decisions can assume a single trusted local user.
+
 - **Category model**: each image holds a _set_ of categories. `uncategorized`
   (default) and `trash` always exist and are reserved; `trash` is exclusive.
   Categories are keyed `1`-`9` then `a`-`z` (cap 35); a fuzzy-find **omnibar**

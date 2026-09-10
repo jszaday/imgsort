@@ -6,6 +6,21 @@ around or deleting anything**: every kept image is moved once into a single
 hidden per-run store, and each category it belongs to gets a lightweight
 navigational reference (a symlink, or a `.lnk` shortcut on Windows) back to it.
 
+## Scope: single local user only
+
+imgsort is a tool you run on your own machine against your own files. It is
+**not** a service and must not be hosted for multiple users:
+
+- The server has **no authentication** and serves files from the directory it
+  is pointed at.
+- It writes its own state (`.imgsort-session.json`) and the generated
+  store / reference tree **into that same directory** — normally your project
+  or photo folder, not a scratch dir.
+- One server = one scan + one session file. Two people, or even two browser
+  tabs making different decisions, will overwrite each other.
+
+Point it at your files, sort, run (or discard) the generated script, done.
+
 ## Features
 
 - Clean, distraction-free interface

@@ -1,5 +1,17 @@
 #!/usr/bin/env node
 
+/*
+ * imgsort is a LOCAL, SINGLE-USER tool. Do not host it for multiple users.
+ *
+ * The server has no authentication, serves files from the directory it is
+ * pointed at, and writes its own state (`.imgsort-session.json`) and the
+ * generated store/references INTO that same directory — which is normally the
+ * user's project/photo dir, not a scratch dir. Two people (or two browser
+ * tabs driving different decisions) against one server share a single scan
+ * and a single session file, so they clobber each other. Run it on your own
+ * machine, against your own files, one session at a time.
+ */
+
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
