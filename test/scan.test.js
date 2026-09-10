@@ -33,7 +33,43 @@ describe('parseArgs', () => {
             help: false,
             error: '',
             positionals: ['photos'],
+            explicit: [],
         });
+    });
+
+    it('tracks which pref flags were explicitly passed (explicit[])', () => {
+        expect(parseArgs(['d']).explicit).toEqual([]);
+        expect(parseArgs(['-r', '--follow-symlinks', 'd']).explicit).toEqual([]);
+        expect(parseArgs(['--hotkey-focus', 'd']).explicit).toContain('focusMode');
+        expect(parseArgs(['--omnibar-focus', 'd']).explicit).toContain('focusMode');
+        expect(parseArgs(['--single-key-advance', 'd']).explicit).toContain('singleKeyAdvance');
+        expect(parseArgs(['--no-single-key-advance', 'd']).explicit).toContain('singleKeyAdvance');
+        expect(parseArgs(['--keep-uncategorized', 'd']).explicit).toContain('keepUncategorized');
+        expect(parseArgs(['--no-single-store-unchanged', 'd']).explicit).toContain(
+            'noSingleStoreUnchanged'
+        );
+        expect(parseArgs(['--no-session', 'd']).explicit).toContain('sessionEnabled');
+        expect(parseArgs(['--out', 'x', 'd']).explicit).toContain('out');
+        expect(parseArgs(['--out=x', 'd']).explicit).toContain('out');
+        const all = parseArgs([
+            '--out=x',
+            '--hotkey-focus',
+            '--single-key-advance',
+            '--keep-uncategorized',
+            '--no-single-store-unchanged',
+            '--no-session',
+            'd',
+        ]).explicit;
+        expect(new Set(all)).toEqual(
+            new Set([
+                'out',
+                'focusMode',
+                'singleKeyAdvance',
+                'keepUncategorized',
+                'noSingleStoreUnchanged',
+                'sessionEnabled',
+            ])
+        );
     });
 
     it('parses every flag, order-independently', () => {

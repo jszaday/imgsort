@@ -247,6 +247,7 @@ const server = http.createServer((req, res) => {
                     keepUncategorized,
                     sessionEnabled,
                     imageSetHash,
+                    explicit: args.explicit,
                 },
             })
         );

@@ -40,19 +40,39 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
   "gesture in progress" and nudge the image a few px for feedback.
   Fixed: a global `[hidden] { display: none !important }` — component
   `display` rules were beating the UA rule and showing hidden banners empty.
+- In-app **Options menu** (⚙ in the dock) exposing the runtime-adjustable
+  settings — single-key-advance, focus mode, category button order,
+  keep-uncategorized, intern-unchanged, output root, theme (System/Light/Dark
+  via `data-theme`), grid animation, autosave. _(landed)_ Persistence: global
+  prefs in `localStorage['imgsort-prefs']` (not per-session); on load an
+  explicit CLI flag wins and is written back, else the stored value, else the
+  default. `parseArgs` now reports `explicit[]`; `/images` options carries it.
+  `--out` is stored as the raw relative string (the script has no `cd`).
+- Category buttons sort by `sortFolders(folders, {by, counts})` (`lib/`) —
+  alpha default, or added / count. Notes: `'count'` order is **stable until the
+  button set changes** (a rebuild on add/remove or menu change), deliberately
+  not reshuffling on every toggle. Key badges (1-9 / a-z) now shift with the
+  sort order and with additions — acceptable; the omnibar is the stable
+  name-based path, and `pressCategoryByIndex` / the omnibar badge both route
+  through the sorted `displayFolders()` view so keys match what's on screen.
 
 ## Next
 
+- **Live rescan** — the disk scan only runs at server startup. Add a `/rescan`
+  endpoint that re-runs the scan (updating `imageFiles` / `imageCategories` /
+  `imageSetHash`) and, client-side, an Options-menu **Rescan now** button plus
+  an **auto-refresh** toggle (poll on an interval). New files appear as unsorted
+  images in their discovered category; removed files get pruned from the txn log
+  the same roll-forward way `resumeSession` does. **Prerequisite**: the rescan
+  must skip imgsort's own output — `.imgsort-store-*` dirs,
+  `.imgsort-session.json`, and (without `--follow-symlinks`) the generated
+  reference tree. This folds in the old "rescan doesn't ignore
+  `.imgsort-store-*` / existing reference symlinks / a stale
+  `.imgsort-session.json`" blind spot — `isImageFile` already excludes `.json`
+  so the session file isn't re-scanned, but the store dirs and reference links
+  are not yet filtered.
 - Consolidate multiple `.imgsort-store-*` dirs from repeated runs into one store
   (dedupe by content / path), instead of a fresh store per run.
-- On rescan, the app does **not** currently ignore `.imgsort-store-*` dirs or
-  recognize existing reference symlinks/`.lnk`s as already-sorted — it'll re-add
-  store copies as fresh images (and, without `--follow-symlinks`, silently skip
-  the references). Decide on skip rules / a resume mode. Same blind spot for a
-  stale `.imgsort-session.json`: it's only cleaned via the in-app Discard /
-  Clear actions, never automatically (the roll-forward resume just prunes txns
-  for images that vanished). `isImageFile` already excludes `.json`, so the
-  session file itself is never re-scanned.
 - Session `meta` resume (currentIndex / frontier / pinnedMode) is best-effort —
   clamped to the current image set, silently defaulted when missing. The txn
   log replays faithfully; only the cursor position is fuzzy.
@@ -77,10 +97,12 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
   `uncategorized/*`)? Currently they're independent; the reserved bare
   `uncategorized` is the only path-namespace special case, and a discovered dir
   literally named `uncategorized` already shadows it.
-- In-app day/night toggle in the dock. The palette is already all CSS custom
-  properties (dark base + `prefers-color-scheme: light` override); this would
-  add a manual switch (button in the dock) that stamps `data-theme` on `:root`
-  and persists the choice, overriding the media query.
+- Store dir name **keyed by project** instead of per-run timestamp+uuid: hash
+  the `fs.realpathSync` of `--out` + the `fs.realpathSync` of the input dir (not
+  the raw argv strings), so re-running the same project reuses / appends to one
+  `.imgsort-store-<projkey>` rather than scattering `.imgsort-store-*`. Pairs
+  with the store-consolidation item above; **open — needs the rescan / ignore
+  story (Live rescan, above) sorted first.**
 
 ### Accented / Option-key shortcut tier (macOS)
 

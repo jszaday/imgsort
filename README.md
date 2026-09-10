@@ -130,11 +130,13 @@ User-created categories come next, in creation order — `+` (or the
 A newly created category is immediately applied to the current image. Discovered
 categories bypass the separator rule — they legitimately contain `/`.
 
-Categories are keyed: the 1st–9th by digits `1`-`9`, the 10th onward by bare
-letters `a`-`z`. Cap is **35** (9 digits + 26 letters). Each button shows its
-key badge, name, and a **live count** of how many images currently carry that
-label (booru-style, e.g. `landscape 42`). ⌘/Ctrl + letter is reserved for
-actions.
+Category buttons are ordered **alphabetically by default** (with `uncategorized`
+then `trash` pinned first); the Options menu switches this to Added (first-seen)
+or Most-used. The keyboard keying follows the on-screen order: 1st–9th by digits
+`1`-`9`, the 10th onward by bare letters `a`-`z`, cap **35** (9 digits + 26
+letters). Each button shows its key badge, name, and a **live count** of how
+many images currently carry that label (booru-style, e.g. `landscape 42`).
+⌘/Ctrl + letter is reserved for actions.
 
 ## Controls
 
@@ -206,14 +208,42 @@ glyph marks a pinned state; a pinned mode ignores position and the base flag.
   ones are highlighted and show a live count)
 - **+ New category**: opens the new-category popup (applied to the current image)
 - **↶ / ↷** (dock): undo / redo the last decision
+- **⚙** (dock): the Options menu
 - **`?`** (dock): keyboard reference + Clear session
+
+### Options menu
+
+The **⚙** button in the dock opens a live settings panel — changes apply
+immediately, there's no Apply button, and closing is just dismiss. Rows are
+grouped **Sorting / Output / Appearance / Session**:
+
+| Setting                               | What it does                                                                                                                                                                |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Single-key advance                    | the `--single-key-advance` base (the Advance pill still layers on top)                                                                                                      |
+| Focus mode                            | Hotkeys / Omnibar — kept in sync with the omnibar pill                                                                                                                      |
+| Keep `uncategorized`                  | the `--keep-uncategorized` behavior; takes effect on future toggles, a replay re-derives with the current value                                                             |
+| Category button order                 | Alphabetical (default) / Added / Most used — `uncategorized`/`trash` stay first; "Most used" re-sorts only when the category list changes; the key badges follow this order |
+| Intern items unchanged from discovery | `--no-single-store-unchanged` inverted (on by default)                                                                                                                      |
+| Output root                           | the `--out` value (text input)                                                                                                                                              |
+| Theme                                 | System / Light / Dark (manual override via `data-theme` on `:root`)                                                                                                         |
+| Background grid animation             | on by default; **forced off** and the row disabled under `prefers-reduced-motion`                                                                                           |
+| Autosave session                      | the `--no-session` equivalent; the row is disabled if the server itself was started with `--no-session`                                                                     |
+
+**Persistence** — these are **global preferences** in `localStorage`
+(`imgsort-prefs`), not per-session. On load, per setting: if the matching **CLI
+flag was explicitly passed** the CLI value wins _and is written back_ to
+`localStorage`; otherwise the stored preference is used, else the built-in
+default. So a plain `node server.js …` is idempotent (your saved prefs stand),
+and passing a flag updates the stored pref. `--out` follows the same rule
+(explicit wins and is stored; else the last stored value; else `.`).
 
 ### In-app popups
 
 `imgsort` never uses `window.prompt` / `window.confirm`. New-category, clear-
-session confirm, and the keyboard reference are small focus-trapped popups
-(dimmed backdrop, `Esc` cancels, `Enter` confirms, click-outside cancels),
-theme-tokenized for light and dark.
+session confirm, the keyboard reference and the Options menu are small
+focus-trapped popups (dimmed backdrop, `Esc` cancels, `Enter` confirms a
+non-destructive primary, click-outside cancels), theme-tokenized for light and
+dark.
 
 ## Sessions
 

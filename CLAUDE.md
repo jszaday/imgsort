@@ -100,3 +100,6 @@ automated check. Logic worth testing belongs in `lib/`, not inline.
   elsewhere), download extensions, shell. Detect via `navigator.userAgentData`
   / `navigator.platform`; keep script-bound values (paths in a `sh` script)
   POSIX regardless.
+- **Use realpaths for path identity** — resolve (`fs.realpathSync`, or against
+  cwd) before comparing, hashing, or keying on a path, so the same location
+  addressed differently is treated as one. The scan code already does this.

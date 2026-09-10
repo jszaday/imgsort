@@ -66,8 +66,12 @@
                 --check-line: rgba(255, 255, 255, 0.04);
             }
 
+            /* Light palette: applied by the system pref only when the user has
+               not forced a theme, and by an explicit data-theme="light". Dark
+               is the base :root, so data-theme="dark" needs no block — it just
+               opts out of the system rule via :not([data-theme]). */
             @media (prefers-color-scheme: light) {
-                :root {
+                :root:not([data-theme]) {
                     --bg-0: #ececed;
                     --bg-1: #ffffff;
                     --bg-2: #f1f1f3;
@@ -112,6 +116,52 @@
                     --check-b: #e6e6e9;
                     --check-line: rgba(24, 24, 27, 0.05);
                 }
+            }
+
+            :root[data-theme='light'] {
+                --bg-0: #ececed;
+                --bg-1: #ffffff;
+                --bg-2: #f1f1f3;
+                --bg-folder: #f5f5f6;
+                --bg-folder-hover: #eaeaec;
+                --bg-nav: #e6e6e9;
+                --bg-nav-hover: #dcdce0;
+                --bg-nav-disabled: #eeeef0;
+                --bg-plain: #e0e0e4;
+                --bg-plain-hover: #d3d3d8;
+                --bg-image: #d9d9dd;
+                --bg-code: #f7f7f8;
+                --bg-badge: #e4e4e8;
+                --dock-bg: rgba(255, 255, 255, 0.85);
+                --hud-bg: rgba(255, 255, 255, 0.72);
+                --glass: rgba(255, 255, 255, 0.78);
+                --glass-hover: rgba(255, 255, 255, 0.92);
+                --scrim: rgba(24, 24, 27, 0.4);
+
+                --text: #18181b;
+                --text-dim: #27272a;
+                --text-code: #27272a;
+                --text-muted: #6b7280;
+                --text-faint: #9ca3af;
+                --text-badge: #6b7280;
+
+                --border: #d4d4d8;
+                --border-soft: #e4e4e7;
+                --border-strong: #a1a1aa;
+
+                --accent: #15803d;
+                --accent-bg: #dcfce7;
+                --danger: #dc2626;
+                --danger-bg: #fee2e2;
+                --warn: #b45309;
+
+                --shadow-dock: 0 6px 20px rgba(24, 24, 27, 0.16);
+                --shadow-btn: 0 4px 12px rgba(24, 24, 27, 0.12);
+                --shadow-panel-up: 0 -2px 12px rgba(24, 24, 27, 0.08);
+
+                --check-a: #f4f4f5;
+                --check-b: #e6e6e9;
+                --check-line: rgba(24, 24, 27, 0.05);
             }
 
             body {
@@ -187,6 +237,10 @@
                         0 240px,
                         0 240px;
                 }
+            }
+
+            .grid-plane.no-anim {
+                animation: none;
             }
 
             @media (prefers-reduced-motion: reduce) {
@@ -642,6 +696,70 @@
                 box-shadow: var(--shadow-dock);
             }
 
+            .popup.wide {
+                width: min(580px, 100%);
+            }
+
+            .opt-group {
+                margin: 16px 0 6px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--text-faint);
+            }
+
+            .opt-group:first-child {
+                margin-top: 0;
+            }
+
+            .opt-row {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                align-items: center;
+                gap: 4px 14px;
+                padding: 8px 0;
+                border-top: 1px solid var(--border-soft);
+            }
+
+            .opt-label {
+                font-size: 13px;
+                color: var(--text-dim);
+            }
+
+            .opt-hint {
+                grid-column: 1 / -1;
+                font-size: 11px;
+                color: var(--text-faint);
+                line-height: 1.4;
+            }
+
+            .opt-row.disabled {
+                opacity: 0.5;
+            }
+
+            .opt-row select,
+            .opt-row input[type='text'] {
+                background: var(--bg-0);
+                border: 1px solid var(--border);
+                border-radius: var(--r-sm);
+                color: var(--text);
+                font-size: 13px;
+                font-family: inherit;
+                padding: 5px 8px;
+            }
+
+            .opt-row input[type='text'] {
+                width: 160px;
+            }
+
+            .opt-row input[type='checkbox'] {
+                width: 16px;
+                height: 16px;
+                accent-color: var(--accent);
+                cursor: pointer;
+            }
+
             .popup-title {
                 font-size: 16px;
                 font-weight: 600;
@@ -975,6 +1093,9 @@
                     >
                         Advance: Manual
                     </button>
+                    <button class="dock-btn" id="optionsBtn" type="button" title="Options">
+                        ⚙
+                    </button>
                     <button
                         class="dock-btn"
                         id="helpBtn"
@@ -1076,6 +1197,7 @@
                 folderKeyBadge,
                 countLabels,
                 applyCountDelta,
+                sortFolders,
             } from '/lib/categories.js';
             import { replay } from '/lib/txns.js';
             import { buildOps, lowerPosix, lowerWindows, refKey } from '/lib/script.js';
@@ -1146,6 +1268,23 @@
             let persistMode = 'server';
             let localWarningDismissed = false;
             const LS_KEY = 'imgsort-session';
+            // Server truly supports /session (false only when started --no-session).
+            let serverSessionAvailable = true;
+
+            // --- global preferences (localStorage, one key, not per-session) ---
+            const PREFS_KEY = 'imgsort-prefs';
+            const PREF_DEFAULTS = {
+                singleKeyAdvance: false,
+                focusMode: 'hotkeys',
+                keepUncategorized: false,
+                categorySort: 'alpha', // 'alpha' | 'added' | 'count'
+                internUnchanged: true, // = !noSingleStoreUnchanged
+                out: '.', // kept as the raw relative string (script has no `cd`)
+                theme: 'system', // 'system' | 'light' | 'dark'
+                gridAnim: true,
+                autosave: true, // = sessionEnabled
+            };
+            let prefs = { ...PREF_DEFAULTS };
 
             /**
              * The category set for an image, normalized so it is never empty
@@ -1342,7 +1481,7 @@
             }
 
             function scheduleSave() {
-                if (!scriptOptions.sessionEnabled || suspendSave) return;
+                if (!scriptOptions.sessionEnabled || !prefs.autosave || suspendSave) return;
                 setSaveIndicator('saving');
                 clearTimeout(saveTimer);
                 saveTimer = setTimeout(doSave, 500);
@@ -1495,11 +1634,12 @@
             async function initSession() {
                 const ind = document.getElementById('saveIndicator');
                 if (!scriptOptions.sessionEnabled) {
+                    serverSessionAvailable = false;
                     ind.hidden = true;
                     return;
                 }
-                ind.hidden = false;
-                setSaveIndicator('idle');
+                ind.hidden = !prefs.autosave;
+                if (prefs.autosave) setSaveIndicator('idle');
 
                 let remote = {};
                 try {
@@ -1509,6 +1649,7 @@
                 }
                 if (remote && remote.disabled) {
                     scriptOptions.sessionEnabled = false;
+                    serverSessionAvailable = false;
                     ind.hidden = true;
                     return;
                 }
@@ -1561,12 +1702,16 @@
                     discovered[index] = categories[image] || 'uncategorized';
                 });
 
+                // Resolve global prefs (defaults <- localStorage <- CLI-explicit)
+                // into live state BEFORE the first replay, since replay honors
+                // scriptOptions.keepUncategorized.
+                loadPrefs();
+
                 suspendSave = true;
                 txns = [];
                 redoStack = [];
                 replayTxns();
 
-                focusMode = scriptOptions.focusMode === 'omnibar' ? 'omnibar' : 'hotkeys';
                 updateFocusModeUI();
                 updateUndoButtons();
                 renderOmnibar();
@@ -1597,18 +1742,30 @@
                 scheduleSave();
             }
 
-            // Category buttons: rebuild the DOM only when the folder list itself
-            // changed; otherwise just refresh active state + live counts.
+            // Category buttons: rebuild the DOM only when the folder SET or the
+            // sort mode changed; otherwise just refresh active state + counts.
+            // Button order (and so the 1-9 / a-z keying) comes from the sorted
+            // view and is stable between rebuilds — 'count' order does not
+            // reshuffle on every toggle.
             /** @type {{ name: string, el: HTMLButtonElement, countEl: HTMLElement }[]} */
             let folderButtons = [];
             let renderedFolderKey = null;
+
+            /** Category names in on-screen order (pinned reserved + prefs.categorySort). */
+            function displayFolders() {
+                return sortFolders(folders, { by: prefs.categorySort, counts: labelCounts });
+            }
+
+            function currentFolderKey() {
+                return `${prefs.categorySort} ${folders.join('\n')}`;
+            }
 
             function rebuildFolderButtons() {
                 const container = document.getElementById('folders');
                 container.innerHTML = '';
                 folderButtons = [];
 
-                folders.forEach((name, i) => {
+                displayFolders().forEach((name, i) => {
                     const button = document.createElement('button');
                     button.className = `btn btn-folder${name === 'trash' ? ' trash' : ''}`;
 
@@ -1637,11 +1794,11 @@
                     container.appendChild(newButton);
                 }
 
-                renderedFolderKey = folders.join('\n');
+                renderedFolderKey = currentFolderKey();
             }
 
             function renderFolders() {
-                if (folders.join('\n') !== renderedFolderKey) rebuildFolderButtons();
+                if (currentFolderKey() !== renderedFolderKey) rebuildFolderButtons();
                 const cur = catSet(currentIndex);
                 for (const b of folderButtons) {
                     b.el.classList.toggle('active', cur.has(b.name));
@@ -1680,8 +1837,9 @@
             }
 
             function pressCategoryByIndex(index) {
-                if (index < 0 || index >= folders.length) return;
-                pressCategory(folders[index]);
+                const df = displayFolders();
+                if (index < 0 || index >= df.length) return;
+                pressCategory(df[index]);
             }
 
             function navigate(direction) {
@@ -1722,8 +1880,13 @@
                     return;
                 }
 
+                const df = displayFolders();
                 const ranked = folders
-                    .map((name, index) => ({ name, index, score: fuzzyScore(query, name) }))
+                    .map(name => ({
+                        name,
+                        index: df.indexOf(name), // display index -> the on-screen key badge
+                        score: fuzzyScore(query, name),
+                    }))
                     .filter(m => m.score >= 0)
                     .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
                     .slice(0, 8)
@@ -2107,6 +2270,7 @@
             /**
              * @param {{
              *   title: string,
+             *   wide?: boolean,
              *   body: (root: HTMLElement) => void,
              *   buttons: { label: string, kind?: 'primary'|'danger'|'ghost',
              *              act?: () => boolean | void }[]
@@ -2119,7 +2283,7 @@
                 const overlay = document.createElement('div');
                 overlay.className = 'popup-overlay';
                 const panel = document.createElement('div');
-                panel.className = 'popup';
+                panel.className = opts.wide ? 'popup wide' : 'popup';
                 overlay.appendChild(panel);
 
                 const h = document.createElement('div');
@@ -2304,6 +2468,314 @@
                 });
             }
 
+            // --- preferences: load / apply / persist -------------------------
+
+            function readStoredPrefs() {
+                try {
+                    return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') || {};
+                } catch {
+                    return {};
+                }
+            }
+
+            function writeStoredPrefs() {
+                try {
+                    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+                } catch {
+                    /* private mode / quota */
+                }
+            }
+
+            function applyTheme() {
+                const t = prefs.theme;
+                if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+            }
+
+            function applyGridAnim() {
+                const plane = document.querySelector('.grid-plane');
+                if (plane) plane.classList.toggle('no-anim', !prefs.gridAnim);
+            }
+
+            function applyAutosave() {
+                const ind = document.getElementById('saveIndicator');
+                const on = prefs.autosave && serverSessionAvailable;
+                if (ind) ind.hidden = !on;
+                if (on) {
+                    setSaveIndicator('idle');
+                    scheduleSave();
+                } else {
+                    clearTimeout(saveTimer);
+                }
+            }
+
+            /** Push every pref into the live state (no re-render side effects). */
+            function applyAllPrefs() {
+                scriptOptions.singleKeyAdvance = !!prefs.singleKeyAdvance;
+                scriptOptions.keepUncategorized = !!prefs.keepUncategorized;
+                scriptOptions.noSingleStoreUnchanged = !prefs.internUnchanged;
+                scriptOptions.out = prefs.out || '.';
+                focusMode = prefs.focusMode === 'omnibar' ? 'omnibar' : 'hotkeys';
+                applyTheme();
+                applyGridAnim();
+            }
+
+            /**
+             * Resolve prefs on load: defaults <- localStorage <- CLI-explicit,
+             * then write the merged result back (so a flag passed on the command
+             * line updates the stored preference).
+             */
+            function loadPrefs() {
+                const stored = readStoredPrefs();
+                prefs = { ...PREF_DEFAULTS };
+                for (const k of Object.keys(PREF_DEFAULTS)) {
+                    if (k in stored) prefs[k] = stored[k];
+                }
+
+                const explicit = new Set(scriptOptions.explicit || []);
+                if (explicit.has('singleKeyAdvance')) {
+                    prefs.singleKeyAdvance = !!scriptOptions.singleKeyAdvance;
+                }
+                if (explicit.has('focusMode')) {
+                    prefs.focusMode = scriptOptions.focusMode === 'omnibar' ? 'omnibar' : 'hotkeys';
+                }
+                if (explicit.has('keepUncategorized')) {
+                    prefs.keepUncategorized = !!scriptOptions.keepUncategorized;
+                }
+                if (explicit.has('noSingleStoreUnchanged')) {
+                    prefs.internUnchanged = !scriptOptions.noSingleStoreUnchanged;
+                }
+                if (explicit.has('out')) prefs.out = scriptOptions.out || '.';
+                if (explicit.has('sessionEnabled')) {
+                    prefs.autosave = !!scriptOptions.sessionEnabled;
+                }
+                // theme / gridAnim / categorySort are UI-only (no CLI flag)
+
+                writeStoredPrefs();
+                applyAllPrefs();
+            }
+
+            /** Live change from the Options menu (or the omnibar pill). */
+            function setPref(key, val) {
+                prefs[key] = val;
+                writeStoredPrefs();
+                if (key === 'singleKeyAdvance') {
+                    scriptOptions.singleKeyAdvance = !!val;
+                    updateDock();
+                } else if (key === 'focusMode') {
+                    setFocusMode(val === 'omnibar' ? 'omnibar' : 'hotkeys');
+                } else if (key === 'categorySort') {
+                    renderFolders(); // currentFolderKey() changed -> full rebuild
+                    renderOmnibar(); // badge indices shift with the sorted view
+                } else if (key === 'keepUncategorized') {
+                    scriptOptions.keepUncategorized = !!val;
+                    maybeRenderScript();
+                } else if (key === 'internUnchanged') {
+                    scriptOptions.noSingleStoreUnchanged = !val;
+                    maybeRenderScript();
+                } else if (key === 'out') {
+                    scriptOptions.out = val || '.';
+                    maybeRenderScript();
+                } else if (key === 'theme') {
+                    applyTheme();
+                } else if (key === 'gridAnim') {
+                    applyGridAnim();
+                } else if (key === 'autosave') {
+                    applyAutosave();
+                }
+            }
+
+            function maybeRenderScript() {
+                if (document.getElementById('results').style.display !== 'none') renderScript();
+            }
+
+            // --- Options menu -----------------------------------------------
+
+            /** @param {HTMLElement} root @param {string} name */
+            function optGroup(root, name) {
+                const h = document.createElement('div');
+                h.className = 'opt-group';
+                h.textContent = name;
+                root.appendChild(h);
+            }
+
+            /**
+             * @param {HTMLElement} root
+             * @param {string} label
+             * @param {string} hint
+             * @param {HTMLElement} control
+             * @param {boolean} [disabled]
+             */
+            function optRow(root, label, hint, control, disabled) {
+                const row = document.createElement('div');
+                row.className = 'opt-row' + (disabled ? ' disabled' : '');
+                const l = document.createElement('div');
+                l.className = 'opt-label';
+                l.textContent = label;
+                const c = document.createElement('div');
+                c.className = 'opt-control';
+                if (disabled && 'disabled' in control) {
+                    /** @type {*} */ (control).disabled = true;
+                }
+                c.appendChild(control);
+                const h = document.createElement('div');
+                h.className = 'opt-hint';
+                h.textContent = hint;
+                row.append(l, c, h);
+                root.appendChild(row);
+            }
+
+            /** @param {boolean} checked @param {(v: boolean) => void} onChange */
+            function optToggle(checked, onChange) {
+                const box = document.createElement('input');
+                box.type = 'checkbox';
+                box.checked = checked;
+                box.addEventListener('change', () => onChange(box.checked));
+                return box;
+            }
+
+            /**
+             * @param {[string, string][]} options  [value, label]
+             * @param {string} value
+             * @param {(v: string) => void} onChange
+             */
+            function optSelect(options, value, onChange) {
+                const sel = document.createElement('select');
+                options.forEach(([v, txt]) => {
+                    const o = document.createElement('option');
+                    o.value = v;
+                    o.textContent = txt;
+                    sel.appendChild(o);
+                });
+                sel.value = value;
+                sel.addEventListener('change', () => onChange(sel.value));
+                return sel;
+            }
+
+            /** @param {string} value @param {(v: string) => void} onChange */
+            function optText(value, onChange) {
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.value = value;
+                inp.addEventListener('change', () => onChange(inp.value));
+                return inp;
+            }
+
+            function openOptionsPopup() {
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                openPopup({
+                    title: 'Options',
+                    wide: true,
+                    body: root => {
+                        optGroup(root, 'Sorting');
+                        optRow(
+                            root,
+                            'Single-key advance',
+                            'A category key also moves to the next image. The Advance pill still ' +
+                                'layers its episodic + pin behavior on top of this base.',
+                            optToggle(prefs.singleKeyAdvance, v => setPref('singleKeyAdvance', v))
+                        );
+                        optRow(
+                            root,
+                            'Focus mode',
+                            'Hotkeys: bare 1-9 / a-z assign, "/" opens the omnibar. Omnibar: the ' +
+                                'search box holds focus and grabs it on every image.',
+                            optSelect(
+                                [
+                                    ['hotkeys', 'Hotkeys'],
+                                    ['omnibar', 'Omnibar'],
+                                ],
+                                prefs.focusMode,
+                                v => setPref('focusMode', v)
+                            )
+                        );
+                        optRow(
+                            root,
+                            'Keep “uncategorized”',
+                            'Off (default): adding a real category drops uncategorized from that ' +
+                                'image. Takes effect on future toggles; a replay re-derives with ' +
+                                'the current value.',
+                            optToggle(prefs.keepUncategorized, v => setPref('keepUncategorized', v))
+                        );
+                        optRow(
+                            root,
+                            'Category button order',
+                            'uncategorized and trash stay first. "Most used" re-sorts only when ' +
+                                'the category list changes, not on every toggle. Key badges ' +
+                                'follow this order.',
+                            optSelect(
+                                [
+                                    ['alpha', 'Alphabetical'],
+                                    ['added', 'Added'],
+                                    ['count', 'Most used'],
+                                ],
+                                prefs.categorySort,
+                                v => setPref('categorySort', v)
+                            )
+                        );
+
+                        optGroup(root, 'Output');
+                        optRow(
+                            root,
+                            'Intern items unchanged from discovery',
+                            'On (default): every kept image goes into the store even if its ' +
+                                'category set still matches what -r discovered.',
+                            optToggle(prefs.internUnchanged, v => setPref('internUnchanged', v))
+                        );
+                        optRow(
+                            root,
+                            'Output root',
+                            'The --out value: where the generated script builds the store and ' +
+                                'category reference dirs. Relative to where you run the script.',
+                            optText(prefs.out, v => setPref('out', v.trim() || '.'))
+                        );
+
+                        optGroup(root, 'Appearance');
+                        optRow(
+                            root,
+                            'Theme',
+                            'Follows your system unless set here.',
+                            optSelect(
+                                [
+                                    ['system', 'System'],
+                                    ['light', 'Light'],
+                                    ['dark', 'Dark'],
+                                ],
+                                prefs.theme,
+                                v => setPref('theme', v)
+                            )
+                        );
+                        optRow(
+                            root,
+                            'Background grid animation',
+                            reduceMotion
+                                ? 'Forced off: your system requests reduced motion.'
+                                : 'The slow drift of the checkerboard backdrop.',
+                            optToggle(prefs.gridAnim && !reduceMotion, v => setPref('gridAnim', v)),
+                            reduceMotion
+                        );
+
+                        optGroup(root, 'Session');
+                        optRow(
+                            root,
+                            'Autosave session',
+                            serverSessionAvailable
+                                ? 'Save every decision to .imgsort-session.json so you can ' +
+                                      'resume, undo and redo.'
+                                : 'The server was started with --no-session.',
+                            optToggle(prefs.autosave && serverSessionAvailable, v =>
+                                setPref('autosave', v)
+                            ),
+                            !serverSessionAvailable
+                        );
+                    },
+                    buttons: [{ label: 'Done', kind: 'ghost' }],
+                });
+            }
+
             // --- gesture-hide: chrome vanishes while a move gesture is active --
 
             let gestureActive = false;
@@ -2395,9 +2867,10 @@
             document.getElementById('undoBtn').addEventListener('click', undo);
             document.getElementById('redoBtn').addEventListener('click', redoTxn);
             document.getElementById('helpBtn').addEventListener('click', openKeyboardPopup);
+            document.getElementById('optionsBtn').addEventListener('click', openOptionsPopup);
 
             document.getElementById('omnibarMode').addEventListener('click', () => {
-                setFocusMode(focusMode === 'omnibar' ? 'hotkeys' : 'omnibar');
+                setPref('focusMode', focusMode === 'omnibar' ? 'hotkeys' : 'omnibar');
             });
 
             omniInput().addEventListener('input', () => {

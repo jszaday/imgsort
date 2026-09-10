@@ -9,6 +9,7 @@ import {
     folderKeyBadge,
     countLabels,
     applyCountDelta,
+    sortFolders,
 } from '../lib/categories.js';
 
 /** @param {Iterable<string>} it */
@@ -116,6 +117,68 @@ describe('countLabels', () => {
     });
     it('empty input -> empty map', () => {
         expect(countLabels([]).size).toBe(0);
+    });
+});
+
+describe('sortFolders', () => {
+    const folders = ['uncategorized', 'trash', 'Zebra', 'apple', 'mango'];
+
+    it('pins uncategorized then trash first regardless of source order', () => {
+        expect(sortFolders(['mango', 'trash', 'apple', 'uncategorized'], { by: 'added' })).toEqual([
+            'uncategorized',
+            'trash',
+            'mango',
+            'apple',
+        ]);
+    });
+
+    it("'alpha' (default) sorts the rest case-insensitively", () => {
+        expect(sortFolders(folders)).toEqual(['uncategorized', 'trash', 'apple', 'mango', 'Zebra']);
+    });
+
+    it("'added' keeps first-seen order", () => {
+        expect(sortFolders(folders, { by: 'added' })).toEqual([
+            'uncategorized',
+            'trash',
+            'Zebra',
+            'apple',
+            'mango',
+        ]);
+    });
+
+    it("'count' is descending, ties broken alphabetically", () => {
+        const counts = new Map([
+            ['apple', 5],
+            ['mango', 5],
+            ['Zebra', 9],
+        ]);
+        expect(sortFolders(folders, { by: 'count', counts })).toEqual([
+            'uncategorized',
+            'trash',
+            'Zebra',
+            'apple',
+            'mango',
+        ]);
+    });
+
+    it("'count' with missing counts falls back to 0 then alpha", () => {
+        expect(sortFolders(folders, { by: 'count' })).toEqual([
+            'uncategorized',
+            'trash',
+            'apple',
+            'mango',
+            'Zebra',
+        ]);
+    });
+
+    it('omits a reserved name that is not in folders', () => {
+        expect(sortFolders(['trash', 'b', 'a'])).toEqual(['trash', 'a', 'b']);
+    });
+
+    it('does not mutate the input array', () => {
+        const input = ['uncategorized', 'trash', 'c', 'a', 'b'];
+        sortFolders(input);
+        expect(input).toEqual(['uncategorized', 'trash', 'c', 'a', 'b']);
     });
 });
 
