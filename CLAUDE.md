@@ -13,9 +13,12 @@ glob: `node server.js "**/*.{jpg,jpeg,png,gif,webp}"`, then open
 - Sorting model: each image is assigned to a named folder. `uncategorized`
   (default for every image) and `trash` always exist and are reserved; users
   add folders on the fly, assigned via digit keys `1`-`9` (so max 9 folders).
-- Nothing touches the filesystem. The results screen generates a shell script
-  the user runs themselves — a POSIX `sh` tab (`rm -i` for trash) and a macOS
-  tab (`#!/bin/zsh`, `trash` CLI). macOS tab auto-selects by browser platform.
+- Nothing touches the filesystem. The results screen is a checklist (folders +
+  per-item checkboxes, all checked by default) that drives a generated shell
+  script the user runs themselves — a POSIX `sh` tab (`rm -i` for trash) and a
+  macOS tab (`#!/bin/zsh`, `trash` CLI). macOS tab auto-selects by browser
+  platform. `uncategorized` is a normal destination folder (`mv` into
+  `./uncategorized/`); only `trash` is special.
 - `/images` returns paths relative to `process.cwd()`; the generated script has
   no `cd` and is meant to be run from that directory, referencing files as
   `./<path>`.
@@ -69,3 +72,8 @@ eslint/tsc do not see `index.html`; prettier is its only automated check.
   on decisions that change the shape of the work.
 - **Keep responses terse — act, don't survey.** Decisions and diffs over
   essays; skip option-by-option write-ups unless asked.
+- **Platform expectations matter.** Match the viewer's OS for things a user
+  reads as native — path separators, modifier keys (⌘ on macOS, Ctrl/Win
+  elsewhere), download extensions, shell. Detect via `navigator.userAgentData`
+  / `navigator.platform`; keep script-bound values (paths in a `sh` script)
+  POSIX regardless.
