@@ -81,13 +81,13 @@ The results screen shows the generated script in a two-tab view with **Copy** an
 The macOS tab is auto-selected on macOS browsers; you can switch manually. In both
 variants the script:
 
-- starts with a shebang (`#!/bin/sh` or `#!/bin/zsh`), `set -e`, and `cd` into the
-  directory the server was started from (`process.cwd()`, exposed via the
-  `/config` endpoint)
-- runs `mkdir -p <folder>` once per user folder, then `mv -i <file> <folder>/` for
-  each file
-- deletes the `trash` folder's files (`rm -i` on POSIX, the `trash` CLI on macOS),
-  preceded by a `# review carefully` comment
+- starts with a shebang (`#!/bin/sh` or `#!/bin/zsh`) and `set -e`; it has no `cd`
+  line and is meant to be run from the directory the images are relative to (the
+  directory the server was started from)
+- runs `mkdir -p <folder>` once per user folder, then `mv -i ./<file> <folder>/`
+  for each file
+- deletes the `trash` folder's files (`rm -i ./<file>` on POSIX, `trash ./<file>`
+  via the `trash` CLI on macOS), preceded by a `# review carefully` comment
 - leaves `uncategorized` files untouched, emitting a comment with the count
 
 Every path is single-quote shell-escaped. The script is also printed to the

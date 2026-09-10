@@ -12,9 +12,7 @@ const __dirname = dirname(__filename);
 
 const PORT = 3000;
 /** @type {string[]} */
-let imageFiles = []; // Relative paths
-/** @type {string[]} */
-let absoluteImagePaths = []; // Absolute paths for display
+let imageFiles = []; // Paths relative to baseDir
 let baseDir = '';
 
 // Get glob pattern from command line arguments
@@ -58,9 +56,6 @@ async function findImages() {
 
         // Store the base directory for serving files
         baseDir = process.cwd();
-
-        // Create absolute paths for display
-        absoluteImagePaths = imageFiles.map(file => path.resolve(baseDir, file));
 
         console.log(`Found ${imageFiles.length} images`);
         console.log(`Starting server at http://localhost:${PORT}`);
@@ -115,17 +110,10 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // API endpoint to get configuration (base directory)
-    if (req.url === '/config') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ baseDir }));
-        return;
-    }
-
-    // API endpoint to get list of images (returns absolute paths)
+    // API endpoint to get list of images (returns paths relative to baseDir)
     if (req.url === '/images') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(absoluteImagePaths));
+        res.end(JSON.stringify(imageFiles));
         return;
     }
 
@@ -133,17 +121,18 @@ const server = http.createServer((req, res) => {
     if (req.url && req.url.startsWith('/image/')) {
         const requestedPath = decodeURIComponent(req.url.substring(7));
 
-        // Security: ensure the requested file is in our image list
-        if (!absoluteImagePaths.includes(requestedPath)) {
+        // Security: ensure the requested file is in our (relative) image list
+        if (!imageFiles.includes(requestedPath)) {
             res.writeHead(404);
             res.end('Image not found');
             return;
         }
 
+        const absolutePath = path.resolve(baseDir, requestedPath);
         const ext = path.extname(requestedPath).toLowerCase();
         const mimeType = mimeTypes[ext] || 'application/octet-stream';
 
-        fs.readFile(requestedPath, (err, data) => {
+        fs.readFile(absolutePath, (err, data) => {
             if (err) {
                 res.writeHead(404);
                 res.end('Image not found');

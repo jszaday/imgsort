@@ -358,7 +358,6 @@
             /** @type {string[]} */
             let images = [];
             let currentIndex = 0;
-            let baseDir = '';
 
             // Folders in numbered order. 1 = uncategorized, 2 = trash, 3..9 = user folders.
             const RESERVED = ['uncategorized', 'trash'];
@@ -370,10 +369,6 @@
             let assignments = {};
 
             async function loadImages() {
-                const configResponse = await fetch('/config');
-                const config = await configResponse.json();
-                baseDir = config.baseDir;
-
                 const response = await fetch('/images');
                 images = await response.json();
 
@@ -522,7 +517,7 @@
              */
             function buildScript(grouped, variant) {
                 const shebang = variant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh';
-                const lines = [shebang, 'set -e', `cd ${shquote(baseDir)}`, ''];
+                const lines = [shebang, 'set -e', ''];
 
                 folders.forEach(folder => {
                     const files = grouped[folder] || [];
@@ -540,11 +535,11 @@
                         if (variant === 'macos') {
                             lines.push('# requires the `trash` CLI: brew install trash');
                             files.forEach(file => {
-                                lines.push(`trash ${shquote(file)}`);
+                                lines.push(`trash ${shquote('./' + file)}`);
                             });
                         } else {
                             files.forEach(file => {
-                                lines.push(`rm -i ${shquote(file)}`);
+                                lines.push(`rm -i ${shquote('./' + file)}`);
                             });
                         }
                         lines.push('');
@@ -553,7 +548,7 @@
 
                     lines.push(`mkdir -p ${shquote(folder)}`);
                     files.forEach(file => {
-                        lines.push(`mv -i ${shquote(file)} ${shquote(folder + '/')}`);
+                        lines.push(`mv -i ${shquote('./' + file)} ${shquote(folder + '/')}`);
                     });
                     lines.push('');
                 });
