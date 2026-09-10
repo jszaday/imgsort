@@ -4,17 +4,39 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
 
 ## Now / in progress
 
-- CLI: `-h`/`--help`, directory input, `-r` recursive, subdir-seeded categories,
-  letter keys for folders past 9. _(in progress)_
+- Single-store + navigational-reference model: multi-category assignment
+  (`assignments[i]` is a Set), `--out`, `--no-single-store-unchanged`,
+  `--follow-symlinks`, `--single-key-advance`, and the third (Windows /
+  PowerShell `.lnk`) script tab. _(landed)_
+- Creating a category auto-applies it to the current image. _(landed)_ Could
+  become a toggle (flag or dock control) if "create without applying" turns
+  out to be a real need.
 
 ## Next
 
+- Consolidate multiple `.imgsort-store-*` dirs from repeated runs into one store
+  (dedupe by content / path), instead of a fresh store per run.
+- On rescan, the app does **not** currently ignore `.imgsort-store-*` dirs or
+  recognize existing reference symlinks/`.lnk`s as already-sorted — it'll re-add
+  store copies as fresh images (and, without `--follow-symlinks`, silently skip
+  the references). Decide on skip rules / a resume mode.
+- Discovered categories bypass `hash8` collision naming only at intern time;
+  two same-basename items in the same category still collide on the reference
+  name. Currently the reference reuses the (already-deduped) store name, so
+  this is fine — revisit if store naming changes.
 - Discovered categories (`-r`) aren't bounded by `MAX_FOLDERS` (35), so a deep
   tree can seed folders past the digit+letter keyspace — those get unusable
-  badges (`⌘{` …) and no working shortcut. Decide: cap + spill to a picker, or
+  badges (past `Z`) and no working shortcut. Decide: cap + spill to a picker, or
   wait for the accented-key tier below.
+- `--single-key-advance` now shadows `⌘/Ctrl+letter`, which is reserved for
+  actions (only `⌘N` used so far). Room for more action chords.
 
 ## Later
+
+- In-app day/night toggle in the dock. The palette is already all CSS custom
+  properties (dark base + `prefers-color-scheme: light` override); this would
+  add a manual switch (button in the dock) that stamps `data-theme` on `:root`
+  and persists the choice, overriding the media query.
 
 ### Accented / Option-key shortcut tier (macOS)
 

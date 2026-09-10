@@ -11,54 +11,273 @@
                 box-sizing: border-box;
             }
 
+            :root {
+                --r: 10px;
+                --r-sm: 6px;
+
+                --bg-0: #1a1a1a;
+                --bg-1: #2a2a2a;
+                --bg-2: #333333;
+                --bg-folder: #3a3a3a;
+                --bg-folder-hover: #4a4a4a;
+                --bg-nav: #444444;
+                --bg-nav-hover: #555555;
+                --bg-nav-disabled: #333333;
+                --bg-plain: #555555;
+                --bg-plain-hover: #666666;
+                --bg-image: #141414;
+                --bg-code: #1a1a1a;
+                --bg-badge: #222222;
+                --dock-bg: #2f2f2f;
+                --hud-bg: rgba(20, 20, 20, 0.6);
+
+                --text: #ffffff;
+                --text-dim: #e0e0e0;
+                --text-code: #dddddd;
+                --text-muted: #888888;
+                --text-faint: #666666;
+                --text-badge: #aaaaaa;
+
+                --border: #555555;
+                --border-soft: #444444;
+                --border-strong: #666666;
+
+                --accent: #4caf50;
+                --accent-bg: #35513a;
+                --danger: #f44336;
+                --danger-bg: #512f2c;
+                --warn: #ffa726;
+
+                --shadow-dock: 0 6px 16px rgba(0, 0, 0, 0.45);
+                --shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.4);
+                --shadow-panel-up: 0 -2px 10px rgba(0, 0, 0, 0.3);
+
+                --check-a: #0d0d0d;
+                --check-b: #161616;
+                --check-line: rgba(255, 255, 255, 0.04);
+            }
+
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --bg-0: #ececed;
+                    --bg-1: #ffffff;
+                    --bg-2: #f1f1f3;
+                    --bg-folder: #f5f5f6;
+                    --bg-folder-hover: #eaeaec;
+                    --bg-nav: #e6e6e9;
+                    --bg-nav-hover: #dcdce0;
+                    --bg-nav-disabled: #eeeef0;
+                    --bg-plain: #e0e0e4;
+                    --bg-plain-hover: #d3d3d8;
+                    --bg-image: #d9d9dd;
+                    --bg-code: #f7f7f8;
+                    --bg-badge: #e4e4e8;
+                    --dock-bg: #ffffff;
+                    --hud-bg: rgba(255, 255, 255, 0.72);
+
+                    --text: #18181b;
+                    --text-dim: #27272a;
+                    --text-code: #27272a;
+                    --text-muted: #6b7280;
+                    --text-faint: #9ca3af;
+                    --text-badge: #6b7280;
+
+                    --border: #d4d4d8;
+                    --border-soft: #e4e4e7;
+                    --border-strong: #a1a1aa;
+
+                    --accent: #15803d;
+                    --accent-bg: #dcfce7;
+                    --danger: #dc2626;
+                    --danger-bg: #fee2e2;
+                    --warn: #b45309;
+
+                    --shadow-dock: 0 6px 20px rgba(24, 24, 27, 0.16);
+                    --shadow-btn: 0 4px 12px rgba(24, 24, 27, 0.12);
+                    --shadow-panel-up: 0 -2px 12px rgba(24, 24, 27, 0.08);
+
+                    --check-a: #f4f4f5;
+                    --check-b: #e6e6e9;
+                    --check-line: rgba(24, 24, 27, 0.05);
+                }
+            }
+
             body {
                 font-family:
                     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
                     Cantarell, sans-serif;
-                background: #1a1a1a;
-                color: #ffffff;
+                background: var(--bg-0);
+                color: var(--text);
                 display: flex;
                 flex-direction: column;
                 height: 100vh;
             }
 
-            .header {
-                padding: 20px;
-                background: #2a2a2a;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            /* Receding checkerboard backdrop, fixed behind the app tiles. */
+            .perspective-grid {
+                position: fixed;
+                inset: 0;
+                z-index: 0;
+                overflow: hidden;
+                pointer-events: none;
+                background: var(--bg-0);
+                -webkit-mask-image: linear-gradient(
+                    to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.35) 30%,
+                    #000 46%,
+                    #000 100%
+                );
+                mask-image: linear-gradient(
+                    to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.35) 30%,
+                    #000 46%,
+                    #000 100%
+                );
             }
 
-            .filename {
-                font-size: 18px;
-                margin-bottom: 10px;
-                color: #e0e0e0;
+            .grid-plane {
+                position: absolute;
+                left: 50%;
+                top: 44%;
+                width: 360vw;
+                height: 360vh;
+                margin-left: -180vw;
+                transform-origin: 50% 0;
+                transform: perspective(150vh) rotateX(61deg) rotateZ(-9deg);
+                background-color: var(--check-b);
+                background-image:
+                    repeating-conic-gradient(var(--check-a) 0% 25%, var(--check-b) 0% 50%),
+                    repeating-linear-gradient(
+                        90deg,
+                        var(--check-line) 0 1px,
+                        transparent 1px 120px
+                    ),
+                    repeating-linear-gradient(0deg, var(--check-line) 0 1px, transparent 1px 120px);
+                background-size:
+                    120px 120px,
+                    120px 120px,
+                    120px 120px;
+                animation: grid-flow 48s linear infinite;
             }
 
-            .progress {
-                font-size: 14px;
-                color: #888;
+            @keyframes grid-flow {
+                from {
+                    background-position:
+                        0 0,
+                        0 0,
+                        0 0;
+                }
+                to {
+                    background-position:
+                        0 240px,
+                        0 240px,
+                        0 240px;
+                }
             }
 
-            .image-container {
+            @media (prefers-reduced-motion: reduce) {
+                .grid-plane {
+                    animation: none;
+                }
+            }
+
+            #sorter,
+            #results {
+                position: relative;
+                z-index: 1;
+            }
+
+            #sorter {
+                gap: 12px;
+                padding: 12px;
+            }
+
+            .image-tile {
                 flex: 1;
+                position: relative;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 padding: 20px;
                 overflow: hidden;
+                background: var(--bg-image);
+                border-radius: var(--r);
             }
 
-            .image-container img {
+            .image-tile img {
                 max-width: 100%;
                 max-height: 100%;
                 object-fit: contain;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                box-shadow: var(--shadow-dock);
+                border-radius: var(--r-sm);
+            }
+
+            .dock {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 5;
+                display: flex;
+                align-items: center;
+                gap: 22px;
+                padding: 10px 18px;
+                background: var(--dock-bg);
+                border: 1px solid var(--border-soft);
+                border-top: none;
+                border-radius: 0 0 var(--r) var(--r);
+                box-shadow: var(--shadow-dock);
+            }
+
+            .dock-filename {
+                flex: 1;
+                min-width: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 14px;
+                color: var(--text-dim);
+            }
+
+            .dock-progress {
+                flex: none;
+                font-size: 13px;
+                color: var(--text-muted);
+                font-variant-numeric: tabular-nums;
+            }
+
+            .hud {
+                flex: none;
+                background: var(--hud-bg);
+                color: var(--text-badge);
+                border: 1px solid var(--border);
+                border-radius: 999px;
+                padding: 5px 12px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    color 0.2s,
+                    border-color 0.2s;
+            }
+
+            .hud:hover {
+                color: var(--text);
+                border-color: var(--border-strong);
+            }
+
+            .hud.pinned {
+                border-color: var(--accent);
+                color: var(--text-dim);
             }
 
             .controls {
-                padding: 30px 20px;
-                background: #2a2a2a;
-                box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+                padding: 24px 20px;
+                background: var(--bg-1);
+                border-radius: var(--r);
+                box-shadow: var(--shadow-panel-up);
             }
 
             .navigation {
@@ -72,7 +291,7 @@
                 padding: 12px 24px;
                 font-size: 16px;
                 border: none;
-                border-radius: 6px;
+                border-radius: var(--r-sm);
                 cursor: pointer;
                 transition: all 0.2s;
                 font-weight: 500;
@@ -80,7 +299,7 @@
 
             .btn:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                box-shadow: var(--shadow-btn);
             }
 
             .btn:active {
@@ -88,17 +307,17 @@
             }
 
             .btn-nav {
-                background: #444;
-                color: #fff;
+                background: var(--bg-nav);
+                color: var(--text);
             }
 
             .btn-nav:hover {
-                background: #555;
+                background: var(--bg-nav-hover);
             }
 
             .btn-nav:disabled {
-                background: #333;
-                color: #666;
+                background: var(--bg-nav-disabled);
+                color: var(--text-faint);
                 cursor: not-allowed;
                 transform: none;
             }
@@ -113,29 +332,30 @@
             }
 
             .btn-folder {
-                background: #3a3a3a;
-                color: #fff;
-                border: 1px solid #555;
+                background: var(--bg-folder);
+                color: var(--text);
+                border: 1px solid var(--border);
+                border-radius: var(--r-sm);
                 display: flex;
                 align-items: center;
                 gap: 8px;
             }
 
             .btn-folder:hover {
-                background: #4a4a4a;
+                background: var(--bg-folder-hover);
             }
 
             .btn-folder.active {
-                border-color: #4caf50;
-                background: #35513a;
+                border-color: var(--accent);
+                background: var(--accent-bg);
             }
 
             .btn-folder.trash {
-                border-color: #f44336;
+                border-color: var(--danger);
             }
 
             .btn-folder.trash.active {
-                background: #512f2c;
+                background: var(--danger-bg);
             }
 
             .btn-folder .key {
@@ -145,27 +365,30 @@
                 min-width: 22px;
                 height: 22px;
                 padding: 0 4px;
-                border-radius: 4px;
-                background: #222;
-                color: #aaa;
+                border-radius: var(--r-sm);
+                background: var(--bg-badge);
+                color: var(--text-badge);
                 font-size: 13px;
                 font-weight: 700;
             }
 
             .btn-new-folder {
-                background: #555;
-                color: #fff;
+                background: var(--bg-plain);
+                color: var(--text);
+                border-radius: var(--r-sm);
             }
 
             .btn-new-folder:hover {
-                background: #666;
+                background: var(--bg-plain-hover);
             }
 
             .folder-error {
                 text-align: center;
                 margin-top: 10px;
+                padding: 2px 8px;
+                border-radius: var(--r-sm);
                 font-size: 13px;
-                color: #f44336;
+                color: var(--danger);
                 min-height: 18px;
             }
 
@@ -173,15 +396,15 @@
                 text-align: center;
                 margin-top: 15px;
                 font-size: 14px;
-                color: #ffa726;
+                color: var(--warn);
             }
 
             .status.trash {
-                color: #f44336;
+                color: var(--danger);
             }
 
             .status.uncategorized {
-                color: #888;
+                color: var(--text-muted);
             }
 
             .results {
@@ -194,28 +417,28 @@
 
             .results h2 {
                 margin-bottom: 20px;
-                color: #e0e0e0;
+                color: var(--text-dim);
             }
 
             .results-section {
                 margin-bottom: 30px;
-                background: #2a2a2a;
+                background: var(--bg-1);
                 padding: 20px;
-                border-radius: 8px;
+                border-radius: var(--r);
             }
 
             .results-section h3 {
                 margin-bottom: 15px;
                 font-size: 18px;
-                color: #4caf50;
+                color: var(--accent);
             }
 
             .results-section.trash h3 {
-                color: #f44336;
+                color: var(--danger);
             }
 
             .results-section.uncategorized h3 {
-                color: #888;
+                color: var(--text-muted);
             }
 
             .file-list {
@@ -226,24 +449,24 @@
 
             .file-list li {
                 padding: 5px 0;
-                color: #ccc;
+                color: var(--text-code);
             }
 
             .help-text {
                 text-align: center;
-                color: #666;
+                color: var(--text-faint);
                 font-size: 12px;
                 margin-top: 10px;
             }
 
             .script-block {
-                background: #1a1a1a;
-                border: 1px solid #444;
-                border-radius: 6px;
+                background: var(--bg-code);
+                border: 1px solid var(--border-soft);
+                border-radius: var(--r);
                 padding: 16px;
                 font-family: monospace;
                 font-size: 13px;
-                color: #ddd;
+                color: var(--text-code);
                 white-space: pre;
                 overflow-x: auto;
             }
@@ -255,22 +478,23 @@
             }
 
             .copy-btn {
-                background: #555;
-                color: white;
+                background: var(--bg-plain);
+                color: var(--text);
                 border: none;
                 padding: 8px 16px;
-                border-radius: 4px;
+                border-radius: var(--r-sm);
                 cursor: pointer;
                 font-size: 12px;
                 transition: background 0.2s;
             }
 
             .copy-btn:hover {
-                background: #666;
+                background: var(--bg-plain-hover);
             }
 
             .copy-btn.copied {
-                background: #4caf50;
+                background: var(--accent);
+                color: #fff;
             }
 
             .script-tabs {
@@ -280,31 +504,31 @@
             }
 
             .script-tab {
-                background: #1a1a1a;
-                color: #aaa;
-                border: 1px solid #444;
+                background: var(--bg-code);
+                color: var(--text-badge);
+                border: 1px solid var(--border-soft);
                 border-bottom: none;
                 padding: 8px 16px;
-                border-radius: 6px 6px 0 0;
+                border-radius: var(--r) var(--r) 0 0;
                 cursor: pointer;
                 font-size: 13px;
                 transition: all 0.2s;
             }
 
             .script-tab:hover {
-                color: #fff;
+                color: var(--text);
             }
 
             .script-tab.active {
-                background: #333;
-                color: #fff;
-                border-color: #666;
+                background: var(--bg-2);
+                color: var(--text);
+                border-color: var(--border-strong);
             }
 
             .checklist-group {
                 margin-bottom: 12px;
-                background: #2a2a2a;
-                border-radius: 8px;
+                background: var(--bg-1);
+                border-radius: var(--r);
                 overflow: hidden;
             }
 
@@ -313,7 +537,7 @@
                 align-items: center;
                 gap: 10px;
                 padding: 12px 16px;
-                background: #333;
+                background: var(--bg-2);
                 cursor: pointer;
                 user-select: none;
             }
@@ -321,50 +545,55 @@
             .checklist-header .caret {
                 width: 12px;
                 font-size: 11px;
-                color: #888;
+                color: var(--text-muted);
             }
 
             .checklist-header .group-name {
                 font-weight: 600;
-                color: #e0e0e0;
+                color: var(--text-dim);
             }
 
             .checklist-group.trash .checklist-header .group-name {
-                color: #f44336;
+                color: var(--danger);
             }
 
             .checklist-group.uncategorized .checklist-header .group-name {
-                color: #888;
+                color: var(--text-muted);
             }
 
             .checklist-header .group-count {
                 font-size: 13px;
-                color: #888;
+                color: var(--text-muted);
             }
 
             .checklist-header .group-hint {
                 margin-left: auto;
                 font-family: monospace;
                 font-size: 12px;
-                color: #666;
+                color: var(--text-faint);
             }
 
             .checklist-items {
                 list-style: none;
-                padding: 8px 16px 12px 38px;
+                padding: 8px 12px 12px 34px;
             }
 
             .checklist-items li {
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                padding: 4px 0;
+                padding: 4px 6px;
+                border-radius: var(--r-sm);
+            }
+
+            .checklist-items li:hover {
+                background: var(--bg-2);
             }
 
             .checklist-items li label {
                 font-family: monospace;
                 font-size: 13px;
-                color: #ccc;
+                color: var(--text-code);
                 cursor: pointer;
             }
 
@@ -375,20 +604,31 @@
             .checklist-group input[type='checkbox'] {
                 width: 15px;
                 height: 15px;
-                accent-color: #4caf50;
+                accent-color: var(--accent);
                 cursor: pointer;
                 flex: none;
             }
         </style>
     </head>
     <body>
-        <div id="sorter" style="display: flex; flex-direction: column; height: 100vh">
-            <div class="header">
-                <div class="filename" id="filename">Loading...</div>
-                <div class="progress" id="progress">0/0</div>
-            </div>
+        <div class="perspective-grid" aria-hidden="true">
+            <div class="grid-plane"></div>
+        </div>
 
-            <div class="image-container">
+        <div id="sorter" style="display: flex; flex-direction: column; height: 100vh">
+            <div class="image-tile">
+                <div class="dock">
+                    <div class="dock-filename" id="filename" title="">Loading...</div>
+                    <div class="dock-progress" id="progress">0 / 0</div>
+                    <button
+                        class="hud"
+                        id="advanceHud"
+                        type="button"
+                        title="Advance mode. Auto: a category key also moves to the next image. Manual: it only toggles the category; you advance with Space / Down. By default this follows your position — Auto at the triage frontier, Manual when you go back to edit an earlier image. Click to pin Auto, then Manual, then back to following."
+                    >
+                        Advance: Manual
+                    </button>
+                </div>
                 <img id="image" src="" alt="Image" />
             </div>
 
@@ -402,12 +642,8 @@
 
                 <div class="folder-error" id="folderError"></div>
 
-                <div class="status" id="status">Folder: uncategorized</div>
-                <div class="help-text" id="helpText">
-                    Press 1-9 to assign the image to a folder and advance; for the 10th folder
-                    onward use the letter key with a modifier (⌘ on macOS, Ctrl elsewhere, e.g. ⌘A /
-                    ^A). Up/Down arrows navigate. "New folder" adds another option (up to 35 total).
-                </div>
+                <div class="status" id="status">Categories: uncategorized</div>
+                <div class="help-text" id="helpText"></div>
             </div>
         </div>
 
@@ -416,8 +652,12 @@
                 <h2>Sorting Complete!</h2>
 
                 <p class="help-text" style="text-align: left; margin-bottom: 15px">
-                    Check the items you want the script to act on. Unchecked items are left
-                    untouched. The script below updates live.
+                    Nothing is moved into category folders and nothing is deleted. Each checked item
+                    is moved <em>once</em> into a single hidden per-run store, and every category
+                    you keep it in gets a lightweight navigational reference (symlink, or a
+                    <code>.lnk</code> shortcut on Windows) pointing back at the store. Trash items
+                    are interned but left unreferenced — recoverable from the store, never removed.
+                    Uncheck a box to drop that one reference. The script updates live.
                 </p>
 
                 <div id="checklist"></div>
@@ -429,6 +669,9 @@
                             POSIX sh
                         </button>
                         <button class="script-tab" id="tabMacos" data-variant="macos">macOS</button>
+                        <button class="script-tab" id="tabWindows" data-variant="windows">
+                            Windows
+                        </button>
                     </div>
                     <div class="script-actions">
                         <button class="copy-btn" id="copyScriptBtn">Copy</button>
@@ -443,6 +686,11 @@
             /** @type {string[]} */
             let images = [];
             let currentIndex = 0;
+            // Highest index the cursor has reached ("triage frontier").
+            let frontier = 0;
+            // HUD pin: null = follow base+position, or a forced 'auto' / 'manual'.
+            /** @type {null | 'auto' | 'manual'} */
+            let pinnedMode = null;
 
             // Folders in key order: 1..9 by digit, 10th+ by letter a, b, c, …
             // 1 = uncategorized, 2 = trash, then discovered/user folders.
@@ -451,12 +699,82 @@
             /** @type {string[]} */
             let folders = ['uncategorized', 'trash'];
 
-            // { index: folderName }
-            /** @type {Object.<number, string>} */
+            // { index: Set<folderName> } — an image can be in multiple categories.
+            /** @type {Object.<number, Set<string>>} */
             let assignments = {};
             // { index: originally-discovered category } (defaults to 'uncategorized')
             /** @type {Object.<number, string>} */
             let discovered = {};
+            // Server options, filled by loadImages().
+            let scriptOptions = {
+                out: '.',
+                noSingleStoreUnchanged: false,
+                singleKeyAdvance: false,
+            };
+
+            /**
+             * The category set for an image, normalized so it is never empty
+             * (an emptied set falls back to {'uncategorized'}).
+             * @param {number} i
+             * @returns {Set<string>}
+             */
+            function catSet(i) {
+                let s = assignments[i];
+                if (!(s instanceof Set) || s.size === 0) {
+                    s = new Set(['uncategorized']);
+                    assignments[i] = s;
+                }
+                return s;
+            }
+
+            /**
+             * Resolve the effective advance mode from pin + base flag + position.
+             * @returns {'auto' | 'manual'}
+             */
+            function effectiveAdvanceMode() {
+                if (pinnedMode) return pinnedMode;
+                if (!scriptOptions.singleKeyAdvance) return 'manual';
+                return currentIndex >= frontier ? 'auto' : 'manual';
+            }
+
+            /** Refresh the dock: filename, progress, and the advance pill. */
+            function updateDock() {
+                const image = images[currentIndex] || '';
+                const fn = document.getElementById('filename');
+                fn.textContent = image ? toDisplay(image) : '—';
+                fn.title = image ? toDisplay(image) : '';
+
+                document.getElementById('progress').textContent =
+                    `${images.length ? currentIndex + 1 : 0} / ${images.length}`;
+
+                const hud = document.getElementById('advanceHud');
+                const mode = effectiveAdvanceMode();
+                const pinned = pinnedMode !== null;
+                hud.textContent =
+                    `Advance: ${mode === 'auto' ? 'Auto' : 'Manual'}` + (pinned ? ' 🔒' : '');
+                hud.classList.toggle('pinned', pinned);
+            }
+
+            /**
+             * Toggle a category for an image. `trash` is exclusive: adding it
+             * clears everything else; adding any real category removes `trash`.
+             * @param {number} i
+             * @param {string} name
+             */
+            function toggleCategory(i, name) {
+                const s = catSet(i);
+                if (s.has(name)) {
+                    s.delete(name);
+                    if (s.size === 0) assignments[i] = new Set(['uncategorized']);
+                    return;
+                }
+                if (name === 'trash') {
+                    assignments[i] = new Set(['trash']);
+                    return;
+                }
+                s.delete('trash');
+                s.add(name);
+            }
 
             function isMacPlatform() {
                 const p = navigator.userAgentData && navigator.userAgentData.platform;
@@ -495,9 +813,22 @@
              * @returns {string}
              */
             function folderKeyBadge(i) {
-                if (i < 9) return String(i + 1);
-                const glyph = isMacPlatform() ? '⌘' : '^';
-                return glyph + folderKey(i).toUpperCase();
+                return folderKey(i).toUpperCase();
+            }
+
+            function updateHelpText() {
+                const el = document.getElementById('helpText');
+                el.textContent =
+                    'Press 1-9 (then a-z for categories 10-35) to toggle that category — an ' +
+                    'image can be in several. Space / Down = next, Up = previous. ' +
+                    (isMacPlatform() ? '⌘N' : 'Ctrl+N') +
+                    ' (or "New folder") makes a new category and applies it to the current image. ' +
+                    'The Advance pill (top-right) ' +
+                    'shows whether a category key also advances: it follows your position ' +
+                    (scriptOptions.singleKeyAdvance
+                        ? '(Auto at the frontier, Manual when you go back to edit)'
+                        : '(Manual by default; started with --single-key-advance for Auto)') +
+                    ' — click it to pin.';
             }
 
             async function loadImages() {
@@ -505,16 +836,18 @@
                 const data = await response.json();
                 images = data.images || [];
                 const categories = data.categories || {};
+                if (data.options) scriptOptions = data.options;
 
                 images.forEach((image, index) => {
                     const category = categories[image] || 'uncategorized';
                     discovered[index] = category;
-                    assignments[index] = category;
+                    assignments[index] = new Set([category]);
                     if (category !== 'uncategorized' && !folders.includes(category)) {
                         folders.push(category);
                     }
                 });
 
+                updateHelpText();
                 renderFolders();
 
                 if (images.length > 0) {
@@ -526,22 +859,27 @@
                 if (index < 0 || index >= images.length) return;
 
                 currentIndex = index;
+                frontier = Math.max(frontier, index);
                 const image = images[index];
 
-                document.getElementById('filename').textContent = toDisplay(image);
-                document.getElementById('progress').textContent = `${index + 1}/${images.length}`;
                 document.getElementById('image').src = `/image/${encodeURIComponent(image)}`;
 
+                updateDock();
                 updateStatus();
                 updateButtons();
                 renderFolders();
             }
 
             function updateStatus() {
-                const folder = assignments[currentIndex];
+                const s = catSet(currentIndex);
                 const statusEl = document.getElementById('status');
-                statusEl.className = `status ${folder}`;
-                statusEl.textContent = `Folder: ${toDisplay(folder)}`;
+                const cls = s.has('trash')
+                    ? 'trash'
+                    : s.size === 1 && s.has('uncategorized')
+                      ? 'uncategorized'
+                      : '';
+                statusEl.className = `status ${cls}`;
+                statusEl.textContent = `Categories: ${[...s].map(toDisplay).join(', ')}`;
             }
 
             function updateButtons() {
@@ -557,7 +895,7 @@
                     const button = document.createElement('button');
                     const isTrash = name === 'trash';
                     button.className = `btn btn-folder${isTrash ? ' trash' : ''}`;
-                    if (assignments[currentIndex] === name) {
+                    if (catSet(currentIndex).has(name)) {
                         button.classList.add('active');
                     }
 
@@ -568,8 +906,9 @@
                     button.appendChild(document.createTextNode(toDisplay(name)));
 
                     button.addEventListener('click', () => {
-                        assignFolder(name);
-                        navigate(1);
+                        toggleCategory(currentIndex, name);
+                        updateStatus();
+                        renderFolders();
                     });
                     container.appendChild(button);
                 });
@@ -615,23 +954,29 @@
 
                 folders.push(name);
                 setFolderError('');
-                renderFolders();
-            }
-
-            function assignFolder(name) {
-                assignments[currentIndex] = name;
+                // A freshly created category applies to the current image (its
+                // whole reason for existing right now). No advance — you may be
+                // adding several, or want to review.
+                toggleCategory(currentIndex, name);
                 updateStatus();
                 renderFolders();
             }
 
-            function assignByIndex(index) {
-                if (index < 0 || index >= folders.length) return;
-                assignFolder(folders[index]);
-                navigate(1);
+            /**
+             * Category key / button pressed: toggle the category on the current
+             * image, then advance iff the effective advance mode is 'auto'.
+             * @param {string} name
+             */
+            function pressCategory(name) {
+                toggleCategory(currentIndex, name);
+                updateStatus();
+                renderFolders();
+                if (effectiveAdvanceMode() === 'auto') navigate(1);
             }
 
-            function assignByDigit(digit) {
-                assignByIndex(digit - 1);
+            function pressCategoryByIndex(index) {
+                if (index < 0 || index >= folders.length) return;
+                pressCategory(folders[index]);
             }
 
             function navigate(direction) {
@@ -653,90 +998,270 @@
             }
 
             /**
-             * @param {Object.<string, string[]>} checkedByFolder - checked paths per folder
-             * @param {'posix' | 'macos'} variant
-             * @param {number} uncheckedCount
+             * PowerShell single-quote a string literal ('' escapes a quote).
+             * @param {string} value
              * @returns {string}
              */
-            function buildScript(checkedByFolder, variant, uncheckedCount) {
-                const shebang = variant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh';
+            function psquote(value) {
+                return `'${String(value).split("'").join("''")}'`;
+            }
 
-                const total = folders.reduce((n, f) => n + (checkedByFolder[f] || []).length, 0);
-                if (total === 0) {
-                    return [shebang, 'set -e', '', '# nothing selected'].join('\n') + '\n';
+            /**
+             * Tiny synchronous FNV-1a string hash, returned as 8 hex digits.
+             * @param {string} str
+             * @returns {string}
+             */
+            function hash8(str) {
+                let h = 0x811c9dc5;
+                for (let i = 0; i < str.length; i++) {
+                    h ^= str.charCodeAt(i);
+                    h = Math.imul(h, 0x01000193);
                 }
+                return (h >>> 0).toString(16).padStart(8, '0');
+            }
 
-                const lines = [shebang, 'set -e', ''];
+            /** @param {string} p */
+            function baseName(p) {
+                const parts = p.split('/');
+                return parts[parts.length - 1];
+            }
 
-                folders.forEach(folder => {
-                    const files = checkedByFolder[folder] || [];
-                    if (files.length === 0) return;
+            /**
+             * @param {string} cat
+             * @param {string} p
+             * @returns {string}
+             */
+            function refKey(cat, p) {
+                return `${cat}\n${p}`;
+            }
 
-                    if (folder === 'trash') {
-                        lines.push('# review carefully — these are deletions');
-                        if (variant === 'macos') {
-                            lines.push('# requires the `trash` CLI: brew install trash');
-                            files.forEach(file => {
-                                lines.push(`trash ${shquote('./' + file)}`);
-                            });
-                        } else {
-                            files.forEach(file => {
-                                lines.push(`rm -i ${shquote('./' + file)}`);
-                            });
-                        }
-                        lines.push('');
-                        return;
-                    }
-
-                    lines.push(`mkdir -p ${shquote(folder)}`);
-                    files.forEach(file => {
-                        lines.push(`mv -i ${shquote('./' + file)} ${shquote(folder + '/')}`);
-                    });
-                    lines.push('');
-                });
-
-                if (uncheckedCount > 0) {
-                    lines.push(`# ${uncheckedCount} item(s) left unchecked and untouched`);
-                }
-
-                return lines.join('\n').replace(/\n+$/, '\n');
+            /**
+             * Generate the per-run single-store directory name.
+             * @returns {string}
+             */
+            function genStoreName() {
+                const d = new Date();
+                const p = n => String(n).padStart(2, '0');
+                const ts =
+                    `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}` +
+                    `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+                const uuid =
+                    (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) ||
+                    `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
+                return `.imgsort-store-${ts}-${uuid}`;
             }
 
             /** @type {Object.<string, string[]>} */
             let groupedFiles = {};
-            /** @type {'posix' | 'macos'} */
+            /** @type {'posix' | 'macos' | 'windows'} */
             let scriptVariant = 'posix';
             /** @type {Set<string>} */
-            let checkedPaths = new Set();
+            let checkedRefs = new Set();
             /** @type {Set<string>} */
             let collapsedFolders = new Set();
             /** @type {Object.<string, string>} */
             let discoveredByPath = {};
+            /** @type {Object.<string, string[]>} */
+            let assignedCats = {};
+            /** Baked into both script tabs so they agree on the store name. */
+            let storeName = '';
+
+            /** @param {string} cat */
+            function catSegs(cat) {
+                return cat.split('/');
+            }
+
+            /**
+             * Build the abstract op list from the current checklist state.
+             * Ops: { op: 'mkdirp', path: string[] } (path relative to --out root),
+             *      { op: 'intern', src: string, name: string },
+             *      { op: 'reference', category: string, name: string, depth: number }.
+             * @returns {{ op: string, [k: string]: * }[]}
+             */
+            function buildOps() {
+                const unchangedSkip = scriptOptions.noSingleStoreUnchanged;
+
+                // Items moved into the store: checked in >= 1 category group.
+                /** @type {string[]} */
+                const interned = [];
+                const internedSet = new Set();
+                images.forEach(image => {
+                    const cats = assignedCats[image] || [];
+                    if (
+                        unchangedSkip &&
+                        cats.length === 1 &&
+                        cats[0] === (discoveredByPath[image] || 'uncategorized')
+                    ) {
+                        return; // left in place
+                    }
+                    const anyChecked = cats.some(cat => checkedRefs.has(refKey(cat, image)));
+                    if (anyChecked && !internedSet.has(image)) {
+                        internedSet.add(image);
+                        interned.push(image);
+                    }
+                });
+
+                if (interned.length === 0) return [];
+
+                // Flat store filenames; collisions get an <hash8>- prefix.
+                const used = new Set();
+                /** @type {Object.<string, string>} */
+                const storeNameFor = {};
+                interned.forEach(image => {
+                    let name = baseName(image);
+                    if (used.has(name)) name = `${hash8(image)}-${baseName(image)}`;
+                    used.add(name);
+                    storeNameFor[image] = name;
+                });
+
+                /** @type {{ op: string, [k: string]: * }[]} */
+                const ops = [{ op: 'mkdirp', path: [storeName] }];
+                interned.forEach(image => {
+                    ops.push({ op: 'intern', src: image, name: storeNameFor[image] });
+                });
+
+                folders.forEach(cat => {
+                    if (cat === 'trash') return; // trash: interned, never referenced
+                    const refs = interned.filter(
+                        image =>
+                            (assignedCats[image] || []).includes(cat) &&
+                            checkedRefs.has(refKey(cat, image))
+                    );
+                    if (refs.length === 0) return;
+                    ops.push({ op: 'mkdirp', path: catSegs(cat) });
+                    refs.forEach(image => {
+                        ops.push({
+                            op: 'reference',
+                            category: cat,
+                            name: storeNameFor[image],
+                            depth: catSegs(cat).length,
+                        });
+                    });
+                });
+
+                return ops;
+            }
+
+            /**
+             * @param {string[]} segs - path segments relative to the --out root
+             * @returns {string} POSIX path including the --out prefix
+             */
+            function outPosix(segs) {
+                const out = scriptOptions.out || '.';
+                return out === '.' ? segs.join('/') : [out, ...segs].join('/');
+            }
+
+            /**
+             * @param {string[]} segs
+             * @returns {string} backslash path including the --out prefix
+             */
+            function outWin(segs) {
+                const out = scriptOptions.out || '.';
+                return (out === '.' ? segs : [out, ...segs]).join('\\');
+            }
+
+            /**
+             * @param {{ op: string, [k: string]: * }[]} ops
+             * @param {string} shebang
+             * @returns {string}
+             */
+            function lowerPosix(ops, shebang) {
+                if (ops.length === 0) {
+                    return [shebang, 'set -e', '', '# nothing to do'].join('\n') + '\n';
+                }
+                const lines = [shebang, 'set -e', ''];
+                ops.forEach(o => {
+                    if (o.op === 'mkdirp') {
+                        lines.push(`mkdir -p ${shquote(outPosix(o.path))}`);
+                    } else if (o.op === 'intern') {
+                        const dst = outPosix([storeName, o.name]);
+                        lines.push(
+                            `echo ${shquote(
+                                `interning into single store: ./${o.src} -> ${outPosix([storeName])}/${o.name}`
+                            )}`
+                        );
+                        lines.push(`mv -i ${shquote(`./${o.src}`)} ${shquote(dst)}`);
+                    } else if (o.op === 'reference') {
+                        const link = outPosix(catSegs(o.category).concat([o.name]));
+                        const target = `${'../'.repeat(o.depth)}${storeName}/${o.name}`;
+                        lines.push(`ln -nfs ${shquote(target)} ${shquote(link)}`);
+                    }
+                });
+                return lines.join('\n').replace(/\n+$/, '\n');
+            }
+
+            /**
+             * @param {{ op: string, [k: string]: * }[]} ops
+             * @returns {string}
+             */
+            function lowerWindows(ops) {
+                const header = [
+                    "$ErrorActionPreference = 'Stop'",
+                    '$root = (Get-Location).Path',
+                    '',
+                ];
+                if (ops.length === 0) {
+                    return [header[0], '', '# nothing to do'].join('\n') + '\n';
+                }
+                const lines = header.slice();
+                ops.forEach(o => {
+                    if (o.op === 'mkdirp') {
+                        const p = outWin(o.path);
+                        lines.push(
+                            `New-Item -ItemType Directory -Force -Path ${psquote(p)} | Out-Null`
+                        );
+                        if (o.path.length === 1 && o.path[0] === storeName) {
+                            lines.push(`(Get-Item ${psquote(p)}).Attributes += 'Hidden'`);
+                        }
+                    } else if (o.op === 'intern') {
+                        const srcWin = `.\\${o.src.split('/').join('\\')}`;
+                        const dst = outWin([storeName, o.name]);
+                        lines.push(
+                            `Write-Host ${psquote(
+                                `interning into single store: ${srcWin} -> ${outWin([storeName])}\\${o.name}`
+                            )}`
+                        );
+                        lines.push(
+                            `Move-Item -LiteralPath ${psquote(srcWin)} -Destination ${psquote(dst)}`
+                        );
+                    } else if (o.op === 'reference') {
+                        const link = outWin(catSegs(o.category).concat([`${o.name}.lnk`]));
+                        const targetAbs = outWin([storeName, o.name]);
+                        lines.push('$ws = New-Object -ComObject WScript.Shell');
+                        lines.push(`$s = $ws.CreateShortcut((Join-Path $root ${psquote(link)}))`);
+                        lines.push(`$s.TargetPath = (Join-Path $root ${psquote(targetAbs)})`);
+                        lines.push('$s.Save()');
+                    }
+                });
+                return lines.join('\n').replace(/\n+$/, '\n');
+            }
+
+            const VARIANTS = {
+                posix: { file: 'imgsort.sh', tab: 'tabPosix' },
+                macos: { file: 'imgsort.command', tab: 'tabMacos' },
+                windows: { file: 'imgsort.ps1', tab: 'tabWindows' },
+            };
 
             function selectVariant(variant) {
                 scriptVariant = variant;
-                document.getElementById('tabPosix').classList.toggle('active', variant === 'posix');
-                document.getElementById('tabMacos').classList.toggle('active', variant === 'macos');
+                Object.keys(VARIANTS).forEach(v => {
+                    document
+                        .getElementById(VARIANTS[v].tab)
+                        .classList.toggle('active', v === variant);
+                });
                 renderScript();
             }
 
             function renderScript() {
-                /** @type {Object.<string, string[]>} */
-                const checkedByFolder = {};
-                let uncheckedCount = 0;
-                folders.forEach(folder => {
-                    const files = groupedFiles[folder] || [];
-                    // Skip items already sitting in their originally-discovered category.
-                    const movable = files.filter(file => discoveredByPath[file] !== folder);
-                    const checked = movable.filter(file => checkedPaths.has(file));
-                    checkedByFolder[folder] = checked;
-                    uncheckedCount += movable.length - checked.length;
-                });
+                const ops = buildOps();
+                const script =
+                    scriptVariant === 'windows'
+                        ? lowerWindows(ops)
+                        : lowerPosix(ops, scriptVariant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh');
 
-                const script = buildScript(checkedByFolder, scriptVariant, uncheckedCount);
                 document.getElementById('scriptBlock').textContent = script;
 
-                const downloadName = scriptVariant === 'macos' ? 'imgsort.command' : 'imgsort.sh';
+                const downloadName = VARIANTS[scriptVariant].file;
                 setupCopyButton('copyScriptBtn', script);
                 setupDownloadButton('downloadScriptBtn', script, downloadName);
 
@@ -778,7 +1303,9 @@
                     const hint = document.createElement('span');
                     hint.className = 'group-hint';
                     hint.textContent =
-                        folder === 'trash' ? '→ ./trash/ (delete)' : `→ ./${toDisplay(folder)}/`;
+                        folder === 'trash'
+                            ? '→ interned, no reference'
+                            : `→ ${toDisplay(outPosix(catSegs(folder)))}/`;
 
                     header.appendChild(caret);
                     header.appendChild(master);
@@ -800,19 +1327,20 @@
 
                     files.forEach((file, ii) => {
                         const li = document.createElement('li');
+                        const key = refKey(folder, file);
 
                         const box = document.createElement('input');
                         box.type = 'checkbox';
                         box.id = `chk_${gi}_${ii}`;
-                        box.checked = checkedPaths.has(file);
+                        box.checked = checkedRefs.has(key);
 
                         const label = document.createElement('label');
                         label.htmlFor = box.id;
                         label.textContent = toDisplay(file);
 
                         box.addEventListener('change', () => {
-                            if (box.checked) checkedPaths.add(file);
-                            else checkedPaths.delete(file);
+                            if (box.checked) checkedRefs.add(key);
+                            else checkedRefs.delete(key);
                             syncMaster();
                             renderScript();
                         });
@@ -829,8 +1357,8 @@
                     master.addEventListener('change', () => {
                         items.forEach(({ box, file }) => {
                             box.checked = master.checked;
-                            if (master.checked) checkedPaths.add(file);
-                            else checkedPaths.delete(file);
+                            if (master.checked) checkedRefs.add(refKey(folder, file));
+                            else checkedRefs.delete(refKey(folder, file));
                         });
                         master.indeterminate = false;
                         renderScript();
@@ -850,6 +1378,8 @@
             }
 
             function showResults() {
+                storeName = genStoreName();
+
                 /** @type {Object.<string, string[]>} */
                 const grouped = {};
                 folders.forEach(folder => {
@@ -857,15 +1387,20 @@
                 });
 
                 discoveredByPath = {};
+                assignedCats = {};
+                checkedRefs = new Set();
                 images.forEach((image, index) => {
-                    const folder = assignments[index] || 'uncategorized';
-                    if (!grouped[folder]) grouped[folder] = [];
-                    grouped[folder].push(image);
+                    const cats = [...catSet(index)];
+                    assignedCats[image] = cats;
                     discoveredByPath[image] = discovered[index] || 'uncategorized';
+                    cats.forEach(cat => {
+                        if (!grouped[cat]) grouped[cat] = [];
+                        grouped[cat].push(image);
+                        checkedRefs.add(refKey(cat, image));
+                    });
                 });
 
                 groupedFiles = grouped;
-                checkedPaths = new Set(images);
                 collapsedFolders = new Set();
 
                 renderChecklist();
@@ -875,8 +1410,11 @@
 
                 document.getElementById('tabPosix').onclick = () => selectVariant('posix');
                 document.getElementById('tabMacos').onclick = () => selectVariant('macos');
+                document.getElementById('tabWindows').onclick = () => selectVariant('windows');
 
-                selectVariant(isMacPlatform() ? 'macos' : 'posix');
+                selectVariant(
+                    isWindowsPlatform() ? 'windows' : isMacPlatform() ? 'macos' : 'posix'
+                );
             }
 
             /**
@@ -929,21 +1467,41 @@
             document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
             document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
 
+            // Advance pill cycles: follow (null) -> pin 'auto' -> pin 'manual' -> follow.
+            document.getElementById('advanceHud').addEventListener('click', () => {
+                pinnedMode = pinnedMode === null ? 'auto' : pinnedMode === 'auto' ? 'manual' : null;
+                updateDock();
+            });
+
             document.addEventListener('keydown', e => {
                 if (document.getElementById('results').style.display !== 'none') return;
 
-                if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key >= '1' && e.key <= '9') {
+                const platformMod = isMacPlatform() ? e.metaKey : e.ctrlKey;
+                const otherMod = isMacPlatform() ? e.ctrlKey : e.metaKey;
+
+                // ⌘N / Ctrl+N — new category (mirrors the "+ New folder" button).
+                if (platformMod && !otherMod && !e.altKey && e.key.toLowerCase() === 'n') {
                     e.preventDefault();
-                    assignByDigit(Number(e.key));
+                    createFolder();
                     return;
                 }
 
-                if (/^[a-z]$/i.test(e.key)) {
-                    const wantMod = isMacPlatform() ? e.metaKey : e.ctrlKey;
-                    const otherMod = isMacPlatform() ? e.ctrlKey : e.metaKey;
-                    if (wantMod && !otherMod && !e.altKey) {
+                // Bare category keys — ignored when any of ⌘/Ctrl/Alt is held.
+                if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+                    const digit = /^Digit([1-9])$/.exec(e.code || '');
+                    if (digit) {
                         e.preventDefault();
-                        assignByIndex(9 + (e.key.toLowerCase().charCodeAt(0) - 97));
+                        pressCategoryByIndex(Number(digit[1]) - 1);
+                        return;
+                    }
+                    if (/^[a-z]$/i.test(e.key)) {
+                        e.preventDefault();
+                        pressCategoryByIndex(9 + (e.key.toLowerCase().charCodeAt(0) - 97));
+                        return;
+                    }
+                    if (e.key === ' ' || e.code === 'Space') {
+                        e.preventDefault();
+                        navigate(1);
                         return;
                     }
                 }

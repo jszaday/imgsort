@@ -20,7 +20,9 @@ let baseDir = '';
 // Supported image extensions
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']);
 
-const USAGE = 'Usage: node server.js [-r|--recursive] [-h|--help] <directory|glob>';
+const USAGE =
+    'Usage: node server.js [-r|--recursive] [--out <dir>] ' +
+    '[--no-single-store-unchanged] [--follow-symlinks] [-h|--help] <directory|glob>';
 
 function printUsage() {
     console.error(USAGE);
@@ -44,12 +46,32 @@ function printHelp() {
             "                     With -r, each image's category is seeded from its",
             '                     parent directory relative to the given root.',
             '                     Ignored for glob arguments.',
+            '  --out <dir>        Output root for the generated tree (single store plus',
+            '                     category reference dirs). Default ".".',
+            '  --single-key-advance | --no-single-key-advance',
+            '                     Base advance mode for the sorter screen. A category',
+            '                     key (1-9 / a-z) always toggles that category; this sets',
+            '                     whether it then advances. --no-single-key-advance',
+            '                     (default) = Manual (advance with Space / Down).',
+            '                     --single-key-advance = Auto at the triage frontier,',
+            '                     flipping to Manual when you go back to edit an earlier',
+            '                     image. The on-screen Advance pill shows the effective',
+            '                     mode and can pin it either way.',
+            '  --no-single-store-unchanged',
+            '                     Leave an item untouched (no intern, no reference) when',
+            '                     its category set is unchanged from -r discovery. Default:',
+            '                     such items are interned and referenced like the rest.',
+            '  --follow-symlinks  Follow symlinked files and directories while scanning',
+            '                     (default: symlinks are ignored entirely). A symlinked',
+            '                     file is interned by its realpath; symlink loops guarded.',
             '  -h, --help         Show this help and exit.',
             '',
             'Examples:',
-            '  node server.js ./photos                 # top level of ./photos',
-            '  node server.js -r ./photos             # ./photos and all subdirectories',
-            '  node server.js "**/*.{jpg,jpeg,png}"  # glob (quote to protect from the shell)',
+            '  node server.js ./photos                       # top level of ./photos',
+            '  node server.js -r ./photos                    # ./photos and subdirectories',
+            '  node server.js -r --out sorted ./photos       # write tree under ./sorted',
+            '  node server.js --single-key-advance ./photos  # category key advances (Auto)',
+            '  node server.js "**/*.{jpg,jpeg,png}"          # glob (quote it from the shell)',
             '',
             `Then open http://localhost:${PORT}`,
         ].join('\n')
@@ -59,14 +81,37 @@ function printHelp() {
 // Parse command line arguments
 const argv = process.argv.slice(2);
 let recursive = false;
+let outDir = '.';
+let noSingleStoreUnchanged = false;
+let followSymlinks = false;
+let singleKeyAdvance = false;
 /** @type {string[]} */
 const positionals = [];
-for (const arg of argv) {
+for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
     if (arg === '-h' || arg === '--help') {
         printHelp();
         process.exit(0);
     } else if (arg === '-r' || arg === '--recursive') {
         recursive = true;
+    } else if (arg === '--out') {
+        const value = argv[++i];
+        if (value === undefined) {
+            console.error('--out requires a directory argument');
+            printUsage();
+            process.exit(1);
+        }
+        outDir = value;
+    } else if (arg.startsWith('--out=')) {
+        outDir = arg.slice('--out='.length);
+    } else if (arg === '--no-single-store-unchanged') {
+        noSingleStoreUnchanged = true;
+    } else if (arg === '--follow-symlinks') {
+        followSymlinks = true;
+    } else if (arg === '--single-key-advance') {
+        singleKeyAdvance = true;
+    } else if (arg === '--no-single-key-advance') {
+        singleKeyAdvance = false;
     } else if (arg.startsWith('-') && arg !== '-') {
         console.error(`Unknown option: ${arg}`);
         printUsage();
@@ -94,27 +139,85 @@ function isImageFile(filename) {
 
 /**
  * Recursively (or not) collect image files under a directory.
+ *
+ * With followSymlinks=false (default) symlink entries are ignored entirely.
+ * With followSymlinks=true a symlinked file is collected by its realpath and a
+ * symlinked directory is descended (with -r), guarding against symlink loops.
+ *
  * @param {string} root
  * @param {boolean} recurse
- * @returns {string[]} paths relative to root, POSIX-normalized
+ * @param {boolean} follow
+ * @param {string} baseReal - realpath of the directory served paths are relative to
+ * @param {string} rootPosix - served-path prefix for files found under root (POSIX)
+ * @returns {{ path: string, category: string }[]} served path + discovered category
  */
-function collectFromDir(root, recurse) {
-    /** @type {string[]} */
+function collectFromDir(root, recurse, follow, baseReal, rootPosix) {
+    /** @type {{ path: string, category: string }[]} */
     const out = [];
+    /** @type {Set<string>} */
+    const visited = new Set([fs.realpathSync(root)]);
+
     /** @param {string} rel */
-    const walk = rel => {
-        const abs = rel === '' ? root : path.join(root, rel);
+    const catOf = rel => {
+        const dir = path.posix.dirname(rel);
+        return dir === '.' ? '' : dir;
+    };
+    /** @param {string} rel */
+    const served = rel => (rootPosix ? `${rootPosix}/${rel}` : rel);
+
+    /**
+     * @param {string} abs
+     * @param {string} rel
+     */
+    const walk = (abs, rel) => {
         const entries = fs.readdirSync(abs, { withFileTypes: true });
         for (const entry of entries) {
+            const childAbs = path.join(abs, entry.name);
             const childRel = rel === '' ? entry.name : `${rel}/${entry.name}`;
-            if (entry.isDirectory()) {
-                if (recurse) walk(childRel);
-            } else if (entry.isFile() && isImageFile(entry.name)) {
-                out.push(childRel);
+            const isSymlink = entry.isSymbolicLink();
+            let isDir = entry.isDirectory();
+            let isFile = entry.isFile();
+
+            if (isSymlink) {
+                if (!follow) continue; // default: ignore symlinks entirely
+                try {
+                    const st = fs.statSync(childAbs); // follows the link
+                    isDir = st.isDirectory();
+                    isFile = st.isFile();
+                } catch {
+                    continue; // broken link
+                }
+            }
+
+            if (isDir) {
+                if (!recurse) continue;
+                let real;
+                try {
+                    real = fs.realpathSync(childAbs);
+                } catch {
+                    continue;
+                }
+                if (visited.has(real)) continue; // symlink-loop guard
+                visited.add(real);
+                walk(childAbs, childRel);
+            } else if (isFile && isImageFile(entry.name)) {
+                if (isSymlink) {
+                    try {
+                        const real = fs.realpathSync(childAbs);
+                        out.push({
+                            path: path.relative(baseReal, real).split(path.sep).join('/'),
+                            category: catOf(childRel),
+                        });
+                    } catch {
+                        continue;
+                    }
+                } else {
+                    out.push({ path: served(childRel), category: catOf(childRel) });
+                }
             }
         }
     };
-    walk('');
+    walk(root, '');
     return out;
 }
 
@@ -130,17 +233,26 @@ async function findImages() {
         }
 
         if (isDir) {
-            const rootRel = path.relative(fs.realpathSync(baseDir), fs.realpathSync(inputArg));
+            const baseReal = fs.realpathSync(baseDir);
+            const rootRel = path.relative(baseReal, fs.realpathSync(inputArg));
             const rootPosix = rootRel.split(path.sep).join('/');
-            console.log(`Scanning directory: ${inputArg}${recursive ? ' (recursive)' : ''}`);
-            const rels = collectFromDir(path.resolve(inputArg), recursive);
-            imageFiles = rels.map(rel => (rootPosix ? `${rootPosix}/${rel}` : rel));
+            console.log(
+                `Scanning directory: ${inputArg}${recursive ? ' (recursive)' : ''}` +
+                    `${followSymlinks ? ' (following symlinks)' : ''}`
+            );
+            const items = collectFromDir(
+                path.resolve(inputArg),
+                recursive,
+                followSymlinks,
+                baseReal,
+                rootPosix
+            );
+            imageFiles = items.map(it => it.path);
 
             if (recursive) {
-                rels.forEach((rel, i) => {
-                    const dir = path.posix.dirname(rel);
-                    if (dir && dir !== '.') {
-                        imageCategories[imageFiles[i]] = dir;
+                items.forEach(it => {
+                    if (it.category) {
+                        imageCategories[it.path] = it.category;
                     }
                 });
             }
@@ -149,6 +261,7 @@ async function findImages() {
             const files = await glob(inputArg, {
                 nodir: true,
                 absolute: false,
+                follow: followSymlinks,
             });
             imageFiles = files.filter(isImageFile);
         }
@@ -214,7 +327,13 @@ const server = http.createServer((req, res) => {
     // API endpoint to get list of images (returns paths relative to baseDir)
     if (req.url === '/images') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ images: imageFiles, categories: imageCategories }));
+        res.end(
+            JSON.stringify({
+                images: imageFiles,
+                categories: imageCategories,
+                options: { out: outDir, noSingleStoreUnchanged, singleKeyAdvance },
+            })
+        );
         return;
     }
 
