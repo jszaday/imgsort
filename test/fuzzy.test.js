@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fuzzyScore } from '../lib/fuzzy.js';
+import { fuzzyScore, fuzzyMatchIndices } from '../lib/fuzzy.js';
 
 describe('fuzzyScore', () => {
     it('scores empty query as 0', () => {
@@ -34,5 +34,32 @@ describe('fuzzyScore', () => {
 
     it('is case-insensitive', () => {
         expect(fuzzyScore('ROME', 'rome')).toBe(fuzzyScore('rome', 'ROME'));
+    });
+});
+
+describe('fuzzyMatchIndices', () => {
+    it('returns every position for an exact match', () => {
+        expect(fuzzyMatchIndices('abc', 'abc')).toEqual([0, 1, 2]);
+    });
+
+    it('returns the greedy first-match positions for a scattered match', () => {
+        expect(fuzzyMatchIndices('ac', 'abc')).toEqual([0, 2]);
+        // 'trip/rome': greedy 'r' -> index 1 (in "trip"), then 'm' -> index 7
+        expect(fuzzyMatchIndices('rm', 'trip/rome')).toEqual([1, 7]);
+        expect(fuzzyMatchIndices('rome', 'trip/rome')).toEqual([1, 6, 7, 8]);
+    });
+
+    it('returns null for a non-subsequence', () => {
+        expect(fuzzyMatchIndices('xyz', 'abc')).toBeNull();
+        expect(fuzzyMatchIndices('cba', 'abc')).toBeNull();
+    });
+
+    it('returns null for an empty query', () => {
+        expect(fuzzyMatchIndices('', 'abc')).toBeNull();
+    });
+
+    it('is case-insensitive but the indices map to the original string', () => {
+        expect(fuzzyMatchIndices('bc', 'aBcD')).toEqual([1, 2]);
+        expect(fuzzyMatchIndices('AB', 'ab')).toEqual([0, 1]);
     });
 });

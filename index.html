@@ -661,6 +661,45 @@
                 color: var(--text);
             }
 
+            /* Omnibar fuzzy-match echo on the category buttons */
+            .btn-folder {
+                transition:
+                    background 0.15s,
+                    border-color 0.15s,
+                    opacity 0.15s;
+            }
+
+            .btn-folder.fz-dim {
+                opacity: 0.5;
+            }
+
+            .btn-folder .label .fz {
+                display: inline-block;
+                color: var(--accent);
+                font-weight: 700;
+                animation: fz-pop 120ms ease-out both;
+                animation-delay: calc(var(--i, 0) * 30ms);
+            }
+
+            @keyframes fz-pop {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.25);
+                    text-shadow: 0 0 6px var(--accent);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .btn-folder .label .fz {
+                    animation: none;
+                }
+            }
+
             .btn-new-folder {
                 background: var(--glass);
                 backdrop-filter: blur(10px);
@@ -1188,7 +1227,7 @@
         </div>
 
         <script type="module">
-            import { fuzzyScore } from '/lib/fuzzy.js';
+            import { fuzzyScore, fuzzyMatchIndices } from '/lib/fuzzy.js';
             import {
                 MAX_FOLDERS,
                 applyToggle,
@@ -1795,6 +1834,10 @@
                 }
 
                 renderedFolderKey = currentFolderKey();
+
+                // Keep the omnibar fuzzy echo alive across a rebuild.
+                const q = omniInput().value;
+                if (q.trim() && document.activeElement === omniInput()) applyOmniHighlight(q);
             }
 
             function renderFolders() {
@@ -1948,6 +1991,63 @@
                 omniInput().value = '';
                 omniHighlight = 0;
                 renderOmnibar();
+                applyOmniHighlight('');
+            }
+
+            /**
+             * Visual echo of the omnibar fuzzy match on the category buttons:
+             * hit chars wrapped in <span class="fz"> (staggered pop), non-matching
+             * buttons dimmed. Empty query clears everything. Off the hot path —
+             * only touches `.label` content + the `.fz-dim` class.
+             * @param {string} rawQuery
+             */
+            function applyOmniHighlight(rawQuery) {
+                const q = (rawQuery || '').trim();
+                for (const b of folderButtons) {
+                    const label = b.el.querySelector('.label');
+                    if (!label) continue;
+                    const disp = toDisplay(b.name);
+
+                    if (!q) {
+                        label.textContent = disp;
+                        b.el.classList.remove('fz-dim');
+                        continue;
+                    }
+
+                    // Match the RAW name (what fuzzyScore/the omnibar ranks). toDisplay
+                    // only swaps '/'→'\' on Windows — a 1:1 map, so indices carry over.
+                    const idx = fuzzyMatchIndices(q, b.name);
+                    if (!idx || idx.length === 0) {
+                        label.textContent = disp;
+                        b.el.classList.add('fz-dim');
+                        continue;
+                    }
+
+                    b.el.classList.remove('fz-dim');
+                    label.textContent = '';
+                    const hits = new Set(idx);
+                    let ord = 0;
+                    let run = '';
+                    const flush = () => {
+                        if (run) {
+                            label.appendChild(document.createTextNode(run));
+                            run = '';
+                        }
+                    };
+                    for (let i = 0; i < disp.length; i++) {
+                        if (hits.has(i)) {
+                            flush();
+                            const span = document.createElement('span');
+                            span.className = 'fz';
+                            span.style.setProperty('--i', String(ord++));
+                            span.textContent = disp[i];
+                            label.appendChild(span);
+                        } else {
+                            run += disp[i];
+                        }
+                    }
+                    flush();
+                }
             }
 
             function updateFocusModeUI() {
@@ -2430,6 +2530,8 @@
                     ['/', 'focus the omnibar (Esc releases it)'],
                     ['↑/↓, Enter', 'in the omnibar: move / pick a match'],
                     [`${mod}+1-9`, 'in the omnibar: jump to that row'],
+                    ['←← / →→', 'double-tap in the omnibar: previous / next image'],
+                    ['swipe', 'drag or two-finger swipe on the image: previous / next'],
                     ['+', `new category (or ${mod}+N where the browser allows it)`],
                     [`${mod}+Z / ${mod}${isMacPlatform() ? '⇧Z' : '+Y'}`, 'undo / redo'],
                 ];
@@ -2809,10 +2911,17 @@
             (() => {
                 const layer = document.getElementById('imageLayer');
                 const img = document.getElementById('image');
+                let wheelDX = 0;
+                let wheelLocked = false;
 
                 layer.addEventListener('pointerdown', e => {
                     activePointers.add(e.pointerId);
-                    dragStart = { x: e.clientX, y: e.clientY, id: e.pointerId };
+                    dragStart = {
+                        x: e.clientX,
+                        y: e.clientY,
+                        id: e.pointerId,
+                        t: performance.now(),
+                    };
                     try {
                         layer.setPointerCapture(e.pointerId);
                     } catch {
@@ -2834,8 +2943,21 @@
                     }
                 });
                 const up = e => {
+                    const started = dragStart && e.pointerId === dragStart.id ? dragStart : null;
                     activePointers.delete(e.pointerId);
-                    if (dragStart && e.pointerId === dragStart.id) dragStart = null;
+                    if (started) {
+                        dragStart = null;
+                        const dx = e.clientX - started.x;
+                        const dy = e.clientY - started.y;
+                        const ms = Math.max(1, performance.now() - started.t);
+                        const swipe =
+                            (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) ||
+                            (Math.abs(dx) > 25 && Math.abs(dx) / ms > 0.5);
+                        if (activePointers.size === 0 && swipe) {
+                            // swipe left (dx<0) -> next, swipe right -> previous.
+                            navigate(dx < 0 ? 1 : -1);
+                        }
+                    }
                     if (gestureActive && activePointers.size === 0) endGesture();
                 };
                 layer.addEventListener('pointerup', up);
@@ -2844,12 +2966,25 @@
 
                 layer.addEventListener(
                     'wheel',
-                    () => {
+                    e => {
                         beginGesture();
                         clearTimeout(gestureTimer);
-                        gestureTimer = setTimeout(endGesture, 180);
+                        gestureTimer = setTimeout(() => {
+                            endGesture();
+                            wheelDX = 0;
+                            wheelLocked = false;
+                        }, 180);
+                        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                            // Suppress the browser's back/forward history swipe.
+                            e.preventDefault();
+                            wheelDX += e.deltaX;
+                            if (!wheelLocked && Math.abs(wheelDX) > 80) {
+                                wheelLocked = true; // one nav per wheel gesture; ignore momentum
+                                navigate(wheelDX > 0 ? 1 : -1);
+                            }
+                        }
                     },
-                    { passive: true }
+                    { passive: false }
                 );
                 layer.addEventListener('gesturestart', beginGesture);
                 layer.addEventListener('gestureend', endGesture);
@@ -2876,11 +3011,31 @@
             omniInput().addEventListener('input', () => {
                 omniHighlight = 0;
                 renderOmnibar();
+                applyOmniHighlight(omniInput().value);
             });
+
+            omniInput().addEventListener('blur', () => applyOmniHighlight(''));
+
+            // Double-tap ←/→ in the omnibar navigates images without leaving Search focus.
+            let lastArrow = { key: '', t: 0 };
 
             omniInput().addEventListener('keydown', e => {
                 const has = omniMatches.length > 0;
                 const jump = (isMacPlatform() ? e.metaKey : e.ctrlKey) && !e.altKey;
+
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    const now = Date.now();
+                    if (lastArrow.key === e.key && now - lastArrow.t < 350) {
+                        e.preventDefault();
+                        navigate(e.key === 'ArrowRight' ? 1 : -1);
+                        lastArrow = { key: '', t: 0 };
+                    } else {
+                        lastArrow = { key: e.key, t: now }; // first tap: normal cursor move
+                    }
+                    return;
+                }
+                lastArrow = { key: '', t: 0 }; // any other key resets the pending arrow
+
                 if (jump && /^[1-9]$/.test(e.key)) {
                     e.preventDefault();
                     pickOmni(Number(e.key) - 1);
@@ -2892,6 +3047,7 @@
                         omniInput().value = '';
                         omniHighlight = 0;
                         renderOmnibar();
+                        applyOmniHighlight('');
                     } else {
                         omniInput().blur();
                     }

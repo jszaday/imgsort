@@ -154,9 +154,11 @@ the receding checkerboard backdrop — and all the chrome floats over it:
   translucent so the image reads through.
 
 That's the whole sorter screen — image, dock, omnibar, buttons. Navigation is
-by keyboard (Space/↓ next, ↑ previous). The chrome **hides while you drag or
-scroll on the image** (a move gesture) and springs back ~0.35 s after it ends;
-a gesture that starts on a button or the omnibar is a normal interaction.
+by keyboard (Space/↓ next, ↑ previous) or by **swipe on the image** — drag or a
+two-finger trackpad swipe, left → next / right → previous (works regardless of
+where keyboard focus is). The chrome **hides while you drag or scroll on the
+image** (a move gesture) and springs back ~0.35 s after it ends; a gesture that
+starts on a button or the omnibar is a normal interaction.
 
 ### The category omnibar
 
@@ -167,6 +169,14 @@ blurs. If what you typed is a valid new category name and nothing matches it
 exactly, the last row is `Create "<name>"` — picking it creates the category and
 applies it to the current image. Picking any row routes through the same
 toggle-and-maybe-advance path as the category buttons.
+
+As you type, the matched characters also **light up in the category buttons
+themselves** — a staggered accent pop on the hit chars, non-matching buttons
+dimmed (static highlight only under `prefers-reduced-motion`). Clearing the
+query / blurring the box restores plain labels.
+
+Inside the box, **double-tap `→`** skips to the next image and **double-tap
+`←`** to the previous — so you can advance without leaving Search focus.
 
 The pill at the box's right end switches **focus mode** (`⌨ Hotkeys` /
 `🔍 Search`), also set at launch with `--hotkey-focus` (default) /
@@ -181,10 +191,12 @@ a `⌨` / `🔍` indicator of the current mode.
   (multi-select). Whether this also advances is the effective advance mode
   (below). Ignored while ⌘/Ctrl/Alt is held, or — in Search mode — while the
   omnibar holds focus.
-- **/**: focus the omnibar · **Esc** in it: clear, then release focus
+- **/**: focus the omnibar · **Esc** in it: clear, then release focus ·
+  **double-tap ← / →** in it: previous / next image
 - **+** (`Shift+=`): create a new category (auto-applied to the current image).
   `⌘N` / `Ctrl+N` too, where the browser allows it
 - **Space** / **Down Arrow**: next image · **Up Arrow**: previous image
+- **Swipe** (drag or two-finger) on the image: left → next, right → previous
 - **?** button (dock): full shortcut list + "Clear session"
 
 ### Advance mode & the Advance pill

@@ -48,6 +48,19 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
   explicit CLI flag wins and is written back, else the stored value, else the
   default. `parseArgs` now reports `explicit[]`; `/images` options carries it.
   `--out` is stored as the raw relative string (the script has no `cd`).
+- Omnibar polish: (a) typing echoes the fuzzy match **on the category buttons**
+  — hit chars wrapped in `<span class="fz">` with a staggered pop, non-matching
+  buttons dimmed; `lib/fuzzy.js` `fuzzyMatchIndices()`; off the hot path via
+  `applyOmniHighlight()`, re-applied on rebuild, cleared on blur / Esc / pick /
+  empty. (b) double-tap `←` / `→` in the omnibar navigates (350 ms window).
+  (c) **swipe navigation** on `#imageLayer` — a pointer swipe (dx over 60px and
+  predominantly horizontal, or a fast flick) and a two-finger wheel (accumulate
+  deltaX, fire once past 80, lock until the 180 ms re-arm timer settles so
+  momentum doesn't repeat). Works regardless of keyboard focus. _(landed)_
+  Wheel-swipe direction (`deltaX` sign → next/prev) is a guess and
+  OS-natural-scroll-dependent; may want a flip or an Options toggle. The
+  horizontal `wheel` listener is `passive:false` + `preventDefault` so it
+  doesn't also trigger the browser's back/forward history swipe.
 - Category buttons sort by `sortFolders(folders, {by, counts})` (`lib/`) —
   alpha default, or added / count. Notes: `'count'` order is **stable until the
   button set changes** (a rebuild on add/remove or menu change), deliberately

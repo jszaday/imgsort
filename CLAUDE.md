@@ -72,11 +72,21 @@ automated check. Logic worth testing belongs in `lib/`, not inline.
   user can okay the push.
 - Early-stage solo project — no PR ceremony; merging straight to `main` is fine
   when the user says so.
-- **Delegate implementation to subagents** to keep the coordinator's context
-  clean — fork or spawn per judgement, worktrees when subtasks are independent.
-  The coordinator keeps design decisions, review, and git. Send follow-up
-  requirements before the agent finishes; a completed agent may miss a queued
-  message and need an explicit resume.
+- **Delegate implementation to subagents; default to a fresh worktree agent
+  per reasonably-grained task, and merge as coordinator.** If you can write a
+  self-contained spec for the task (you usually can), it does not need a prior
+  agent's history — hand it to a new `isolation: "worktree"` agent, review its
+  branch, and rebase/ff it onto the working branch yourself. Repeatedly
+  **resuming one long-lived agent balloons its context** (it replays its whole
+  transcript each turn) — that is the poor context hygiene delegation is meant
+  to avoid; it makes the agent a de facto fork. Only resume the same agent when
+  the work is genuinely one continuous thread on an in-flight change that isn't
+  yet reviewable. Be deliberate about grain size: split independent pieces
+  (a `lib/` helper + test, a CSS animation, a server endpoint) into parallel
+  worktree agents rather than serializing them through one. The coordinator
+  keeps design decisions, review, and git. Send follow-up requirements before
+  an agent finishes; a completed agent may miss a queued message and need an
+  explicit resume.
 - Match existing style: 4-space indent, single quotes, semicolons. `index.html`
   keeps inline CSS + its DOM-wiring script, but pure logic goes in `lib/*.js`
   (imported by both `index.html` and `server.js`). No build step, and no new
