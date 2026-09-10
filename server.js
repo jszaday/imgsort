@@ -115,6 +115,13 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // API endpoint to get configuration (base directory)
+    if (req.url === '/config') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ baseDir }));
+        return;
+    }
+
     // API endpoint to get list of images (returns absolute paths)
     if (req.url === '/images') {
         res.writeHead(200, { 'Content-Type': 'application/json' });

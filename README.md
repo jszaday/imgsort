@@ -1,14 +1,15 @@
 # Image Sorter
 
-A fast, browser-based utility for quickly sorting through images to decide which ones to keep or discard.
+A fast, browser-based utility for quickly triaging images into named folders and
+generating a shell script that moves (or deletes) them.
 
 ## Features
 
 - Clean, distraction-free interface
-- Keyboard shortcuts for quick sorting
+- Assign each image to a named folder with a single digit key
+- Create new folders on the fly
 - Navigate back to change previous decisions
-- Tracks keep/discard/undecided status
-- Shows final summary with all categorized files
+- Generates a POSIX `sh` script you can copy or download
 
 ## Installation
 
@@ -33,37 +34,66 @@ node server.js "~/Pictures/**/*.png"
 
 Then open your browser to: http://localhost:3000
 
+## Folder model
+
+Every image starts in the default **`uncategorized`** folder. Two folders always
+exist and are numbered first:
+
+- `1` = **uncategorized** — files stay where they are
+- `2` = **trash** — files are deleted (`rm -i`)
+
+User-created folders are numbered `3`-`9` in the order they were created. Click
+**+ New folder** and enter a name (non-empty, no `/`, not a duplicate, and not the
+reserved names `trash` / `uncategorized`).
+
 ## Controls
 
 ### Keyboard Shortcuts
 
-- **Left Arrow**: Mark as discard and move to next image
-- **Right Arrow**: Mark as keep and move to next image
+- **1-9**: Assign the current image to that numbered folder and move to the next image
 - **Up Arrow**: Go to previous image
 - **Down Arrow**: Go to next image
 
 ### Mouse Controls
 
-- **Keep Button**: Mark current image as keep and move forward
-- **Discard Button**: Mark current image as discard and move forward
+- **Folder buttons**: Assign the current image to that folder and move forward
+- **+ New folder**: Create a new numbered folder
 - **Previous/Next Buttons**: Navigate between images
 
 ## How It Works
 
 1. Start the server with a glob pattern matching your images
-2. Navigate through images one at a time
-3. Use arrow keys or buttons to categorize each image
-4. Go back anytime to change previous decisions
-5. After viewing all images, see the final summary with:
-    - Keep list
-    - Discard list
-    - Undecided list (images you skipped)
+2. Create the folders you need, then page through the images assigning each one
+3. Go back anytime to change a previous assignment
+4. After the last image, the results screen shows one section per non-empty folder
+   (`uncategorized` is shown but labeled as staying put)
 
-The results are displayed on screen and also printed to the browser console for easy copying.
+### Generated script
+
+The results screen shows the generated script in a two-tab view with **Copy** and
+**Download** buttons per tab:
+
+- **POSIX sh** — `#!/bin/sh`, uses `rm -i` for the `trash` folder, downloads as
+  `imgsort.sh`
+- **macOS** — `#!/bin/zsh`, uses the `trash` CLI (`brew install trash`) for the
+  `trash` folder, downloads as `imgsort.command`
+
+The macOS tab is auto-selected on macOS browsers; you can switch manually. In both
+variants the script:
+
+- starts with `#!/bin/sh`, `set -e`, and `cd` into the directory the server was
+  started from (`process.cwd()`, exposed via the `/config` endpoint)
+- runs `mkdir -p <folder>` once per user folder, then `mv -i <file> <folder>/` for
+  each file
+- uses `rm -i <file>` for the `trash` folder, preceded by a
+  `# review carefully` comment
+- leaves `uncategorized` files untouched, emitting a comment with the count
+
+Every path is single-quote shell-escaped. The script is also printed to the
+browser console.
 
 ## Notes
 
-- All decisions are stored in memory (not saved to disk)
-- Going back updates your previous selection
-- Images default to "undecided" if you don't make a choice
+- All assignments are stored in memory (not saved to disk)
+- Nothing is moved or deleted until you run the generated script yourself
 - Press Ctrl+C in the terminal to stop the server

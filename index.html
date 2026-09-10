@@ -103,51 +103,85 @@
                 transform: none;
             }
 
-            .actions {
+            .folders {
                 display: flex;
-                gap: 15px;
+                flex-wrap: wrap;
+                gap: 10px;
                 justify-content: center;
+                max-width: 900px;
+                margin: 0 auto;
             }
 
-            .btn-keep {
-                background: #4caf50;
-                color: white;
-                flex: 1;
-                max-width: 200px;
+            .btn-folder {
+                background: #3a3a3a;
+                color: #fff;
+                border: 1px solid #555;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
 
-            .btn-keep:hover {
-                background: #45a049;
+            .btn-folder:hover {
+                background: #4a4a4a;
             }
 
-            .btn-discard {
-                background: #f44336;
-                color: white;
-                flex: 1;
-                max-width: 200px;
+            .btn-folder.active {
+                border-color: #4caf50;
+                background: #35513a;
             }
 
-            .btn-discard:hover {
-                background: #da190b;
+            .btn-folder.trash {
+                border-color: #f44336;
+            }
+
+            .btn-folder.trash.active {
+                background: #512f2c;
+            }
+
+            .btn-folder .key {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 22px;
+                height: 22px;
+                padding: 0 4px;
+                border-radius: 4px;
+                background: #222;
+                color: #aaa;
+                font-size: 13px;
+                font-weight: 700;
+            }
+
+            .btn-new-folder {
+                background: #555;
+                color: #fff;
+            }
+
+            .btn-new-folder:hover {
+                background: #666;
+            }
+
+            .folder-error {
+                text-align: center;
+                margin-top: 10px;
+                font-size: 13px;
+                color: #f44336;
+                min-height: 18px;
             }
 
             .status {
                 text-align: center;
                 margin-top: 15px;
                 font-size: 14px;
-                color: #888;
+                color: #ffa726;
             }
 
-            .status.keep {
-                color: #4caf50;
-            }
-
-            .status.discard {
+            .status.trash {
                 color: #f44336;
             }
 
-            .status.undecided {
-                color: #ffa726;
+            .status.uncategorized {
+                color: #888;
             }
 
             .results {
@@ -173,18 +207,15 @@
             .results-section h3 {
                 margin-bottom: 15px;
                 font-size: 18px;
-            }
-
-            .results-section.keep h3 {
                 color: #4caf50;
             }
 
-            .results-section.discard h3 {
+            .results-section.trash h3 {
                 color: #f44336;
             }
 
-            .results-section.undecided h3 {
-                color: #ffa726;
+            .results-section.uncategorized h3 {
+                color: #888;
             }
 
             .file-list {
@@ -205,6 +236,24 @@
                 margin-top: 10px;
             }
 
+            .script-block {
+                background: #1a1a1a;
+                border: 1px solid #444;
+                border-radius: 6px;
+                padding: 16px;
+                font-family: monospace;
+                font-size: 13px;
+                color: #ddd;
+                white-space: pre;
+                overflow-x: auto;
+            }
+
+            .script-actions {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
             .copy-btn {
                 background: #555;
                 color: white;
@@ -213,7 +262,6 @@
                 border-radius: 4px;
                 cursor: pointer;
                 font-size: 12px;
-                margin-left: 10px;
                 transition: background 0.2s;
             }
 
@@ -225,16 +273,32 @@
                 background: #4caf50;
             }
 
-            .results-section h3 {
+            .script-tabs {
                 display: flex;
-                align-items: center;
-                justify-content: space-between;
+                gap: 4px;
+                margin-bottom: 15px;
             }
 
-            .section-title {
-                display: flex;
-                align-items: center;
-                gap: 10px;
+            .script-tab {
+                background: #1a1a1a;
+                color: #aaa;
+                border: 1px solid #444;
+                border-bottom: none;
+                padding: 8px 16px;
+                border-radius: 6px 6px 0 0;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.2s;
+            }
+
+            .script-tab:hover {
+                color: #fff;
+            }
+
+            .script-tab.active {
+                background: #333;
+                color: #fff;
+                border-color: #666;
             }
         </style>
     </head>
@@ -251,17 +315,19 @@
 
             <div class="controls">
                 <div class="navigation">
-                    <button class="btn btn-nav" id="prevBtn">← Previous</button>
-                    <button class="btn btn-nav" id="nextBtn">Next →</button>
+                    <button class="btn btn-nav" id="prevBtn">&larr; Previous</button>
+                    <button class="btn btn-nav" id="nextBtn">Next &rarr;</button>
                 </div>
 
-                <div class="actions">
-                    <button class="btn btn-discard" id="discardBtn">← Discard (Left Arrow)</button>
-                    <button class="btn btn-keep" id="keepBtn">Keep (Right Arrow) →</button>
-                </div>
+                <div class="folders" id="folders"></div>
 
-                <div class="status" id="status">Status: Undecided</div>
-                <div class="help-text">Use arrow keys: Left = Discard, Right = Keep</div>
+                <div class="folder-error" id="folderError"></div>
+
+                <div class="status" id="status">Folder: uncategorized</div>
+                <div class="help-text" id="helpText">
+                    Press 1-9 to assign the image to a folder and advance. Up/Down arrows navigate.
+                    "New folder" adds another numbered option.
+                </div>
             </div>
         </div>
 
@@ -269,48 +335,53 @@
             <div class="results">
                 <h2>Sorting Complete!</h2>
 
-                <div class="results-section keep">
-                    <h3>
-                        <span class="section-title">Keep (<span id="keepCount">0</span>)</span>
-                        <button class="copy-btn" id="copyKeepBtn">Copy</button>
-                    </h3>
-                    <ul class="file-list" id="keepList"></ul>
-                </div>
+                <div id="resultsSections"></div>
 
-                <div class="results-section discard">
-                    <h3>
-                        <span class="section-title"
-                            >Discard (<span id="discardCount">0</span>)</span
-                        >
-                        <button class="copy-btn" id="copyDiscardBtn">Copy</button>
-                    </h3>
-                    <ul class="file-list" id="discardList"></ul>
-                </div>
-
-                <div class="results-section undecided">
-                    <h3>
-                        <span class="section-title"
-                            >Undecided (<span id="undecidedCount">0</span>)</span
-                        >
-                        <button class="copy-btn" id="copyUndecidedBtn">Copy</button>
-                    </h3>
-                    <ul class="file-list" id="undecidedList"></ul>
+                <div class="results-section">
+                    <h3>Generated script</h3>
+                    <div class="script-tabs">
+                        <button class="script-tab" id="tabPosix" data-variant="posix">
+                            POSIX sh
+                        </button>
+                        <button class="script-tab" id="tabMacos" data-variant="macos">macOS</button>
+                    </div>
+                    <div class="script-actions">
+                        <button class="copy-btn" id="copyScriptBtn">Copy</button>
+                        <button class="copy-btn" id="downloadScriptBtn">Download</button>
+                    </div>
+                    <pre class="script-block" id="scriptBlock"></pre>
                 </div>
             </div>
         </div>
 
         <script>
+            /** @type {string[]} */
             let images = [];
             let currentIndex = 0;
-            let decisions = {}; // { index: 'keep' | 'discard' | 'undecided' }
+            let baseDir = '';
+
+            // Folders in numbered order. 1 = uncategorized, 2 = trash, 3..9 = user folders.
+            const RESERVED = ['uncategorized', 'trash'];
+            /** @type {string[]} */
+            let folders = ['uncategorized', 'trash'];
+
+            // { index: folderName }
+            /** @type {Object.<number, string>} */
+            let assignments = {};
 
             async function loadImages() {
+                const configResponse = await fetch('/config');
+                const config = await configResponse.json();
+                baseDir = config.baseDir;
+
                 const response = await fetch('/images');
                 images = await response.json();
 
                 images.forEach((_, index) => {
-                    decisions[index] = 'undecided';
+                    assignments[index] = 'uncategorized';
                 });
+
+                renderFolders();
 
                 if (images.length > 0) {
                     showImage(0);
@@ -329,14 +400,14 @@
 
                 updateStatus();
                 updateButtons();
+                renderFolders();
             }
 
             function updateStatus() {
-                const status = decisions[currentIndex];
+                const folder = assignments[currentIndex];
                 const statusEl = document.getElementById('status');
-
-                statusEl.className = `status ${status}`;
-                statusEl.textContent = `Status: ${status.charAt(0).toUpperCase() + status.slice(1)}`;
+                statusEl.className = `status ${folder}`;
+                statusEl.textContent = `Folder: ${folder}`;
             }
 
             function updateButtons() {
@@ -344,9 +415,86 @@
                 document.getElementById('nextBtn').disabled = currentIndex === images.length - 1;
             }
 
-            function setDecision(decision) {
-                decisions[currentIndex] = decision;
+            function renderFolders() {
+                const container = document.getElementById('folders');
+                container.innerHTML = '';
+
+                folders.forEach((name, i) => {
+                    const button = document.createElement('button');
+                    const isTrash = name === 'trash';
+                    button.className = `btn btn-folder${isTrash ? ' trash' : ''}`;
+                    if (assignments[currentIndex] === name) {
+                        button.classList.add('active');
+                    }
+
+                    const key = document.createElement('span');
+                    key.className = 'key';
+                    key.textContent = String(i + 1);
+                    button.appendChild(key);
+                    button.appendChild(document.createTextNode(name));
+
+                    button.addEventListener('click', () => {
+                        assignFolder(name);
+                        navigate(1);
+                    });
+                    container.appendChild(button);
+                });
+
+                if (folders.length < 9) {
+                    const newButton = document.createElement('button');
+                    newButton.className = 'btn btn-new-folder';
+                    newButton.textContent = '+ New folder';
+                    newButton.addEventListener('click', createFolder);
+                    container.appendChild(newButton);
+                }
+            }
+
+            function setFolderError(message) {
+                document.getElementById('folderError').textContent = message || '';
+            }
+
+            function createFolder() {
+                const raw = window.prompt('New folder name:');
+                if (raw === null) return;
+
+                const name = raw.trim();
+                if (name === '') {
+                    setFolderError('Folder name cannot be empty.');
+                    return;
+                }
+                if (name.includes('/')) {
+                    setFolderError('Folder name cannot contain "/".');
+                    return;
+                }
+                if (RESERVED.includes(name)) {
+                    setFolderError(`"${name}" is a reserved folder name.`);
+                    return;
+                }
+                if (folders.includes(name)) {
+                    setFolderError(`Folder "${name}" already exists.`);
+                    return;
+                }
+                if (folders.length >= 9) {
+                    setFolderError('Maximum of 9 folders reached.');
+                    return;
+                }
+
+                folders.push(name);
+                setFolderError('');
+                renderFolders();
+            }
+
+            function assignFolder(name) {
+                assignments[currentIndex] = name;
                 updateStatus();
+                renderFolders();
+            }
+
+            function assignByDigit(digit) {
+                const index = digit - 1;
+                if (index < 0 || index >= folders.length) return;
+                assignFolder(folders[index]);
+                navigate(1);
             }
 
             function navigate(direction) {
@@ -358,48 +506,151 @@
                 }
             }
 
-            function showResults() {
-                const keep = [];
-                const discard = [];
-                const undecided = [];
+            /**
+             * POSIX shell single-quote a string.
+             * @param {string} value
+             * @returns {string}
+             */
+            function shquote(value) {
+                return `'${value.split("'").join(`'\\''`)}'`;
+            }
 
-                images.forEach((image, index) => {
-                    const decision = decisions[index];
-                    if (decision === 'keep') keep.push(image);
-                    else if (decision === 'discard') discard.push(image);
-                    else undecided.push(image);
+            /**
+             * @param {Object.<string, string[]>} grouped
+             * @param {'posix' | 'macos'} variant
+             * @returns {string}
+             */
+            function buildScript(grouped, variant) {
+                const shebang = variant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh';
+                const lines = [shebang, 'set -e', `cd ${shquote(baseDir)}`, ''];
+
+                folders.forEach(folder => {
+                    const files = grouped[folder] || [];
+
+                    if (folder === 'uncategorized') {
+                        lines.push(`# ${files.length} file(s) left in place (uncategorized)`);
+                        lines.push('');
+                        return;
+                    }
+
+                    if (files.length === 0) return;
+
+                    if (folder === 'trash') {
+                        lines.push('# review carefully — these are deletions');
+                        if (variant === 'macos') {
+                            lines.push('# requires the `trash` CLI: brew install trash');
+                            files.forEach(file => {
+                                lines.push(`trash ${shquote(file)}`);
+                            });
+                        } else {
+                            files.forEach(file => {
+                                lines.push(`rm -i ${shquote(file)}`);
+                            });
+                        }
+                        lines.push('');
+                        return;
+                    }
+
+                    lines.push(`mkdir -p ${shquote(folder)}`);
+                    files.forEach(file => {
+                        lines.push(`mv -i ${shquote(file)} ${shquote(folder + '/')}`);
+                    });
+                    lines.push('');
                 });
 
-                document.getElementById('keepCount').textContent = keep.length;
-                document.getElementById('discardCount').textContent = discard.length;
-                document.getElementById('undecidedCount').textContent = undecided.length;
+                return lines.join('\n').replace(/\n+$/, '\n');
+            }
 
-                document.getElementById('keepList').innerHTML =
-                    keep.map(f => `<li>${f}</li>`).join('') || '<li>None</li>';
-                document.getElementById('discardList').innerHTML =
-                    discard.map(f => `<li>${f}</li>`).join('') || '<li>None</li>';
-                document.getElementById('undecidedList').innerHTML =
-                    undecided.map(f => `<li>${f}</li>`).join('') || '<li>None</li>';
+            /** @type {Object.<string, string[]>} */
+            let groupedFiles = {};
+            /** @type {'posix' | 'macos'} */
+            let scriptVariant = 'posix';
+
+            function isMacOS() {
+                const uaPlatform = navigator.userAgentData && navigator.userAgentData.platform;
+                return uaPlatform === 'macOS' || /Mac/.test(navigator.platform);
+            }
+
+            function selectVariant(variant) {
+                scriptVariant = variant;
+                document.getElementById('tabPosix').classList.toggle('active', variant === 'posix');
+                document.getElementById('tabMacos').classList.toggle('active', variant === 'macos');
+
+                const script = buildScript(groupedFiles, variant);
+                document.getElementById('scriptBlock').textContent = script;
+
+                const downloadName = variant === 'macos' ? 'imgsort.command' : 'imgsort.sh';
+                setupCopyButton('copyScriptBtn', script);
+                setupDownloadButton('downloadScriptBtn', script, downloadName);
+
+                console.log(`\n=== GENERATED SCRIPT (${downloadName}) ===\n`);
+                console.log(script);
+            }
+
+            function showResults() {
+                /** @type {Object.<string, string[]>} */
+                const grouped = {};
+                folders.forEach(folder => {
+                    grouped[folder] = [];
+                });
+
+                images.forEach((image, index) => {
+                    const folder = assignments[index] || 'uncategorized';
+                    if (!grouped[folder]) grouped[folder] = [];
+                    grouped[folder].push(image);
+                });
+
+                const sectionsEl = document.getElementById('resultsSections');
+                sectionsEl.innerHTML = '';
+
+                folders.forEach(folder => {
+                    const files = grouped[folder] || [];
+                    if (files.length === 0) return;
+
+                    const section = document.createElement('div');
+                    section.className = `results-section ${folder}`;
+
+                    const heading = document.createElement('h3');
+                    if (folder === 'uncategorized') {
+                        heading.textContent = `uncategorized (${files.length}) — staying put`;
+                    } else if (folder === 'trash') {
+                        heading.textContent = `trash (${files.length}) — delete`;
+                    } else {
+                        heading.textContent = `${folder} (${files.length})`;
+                    }
+                    section.appendChild(heading);
+
+                    const list = document.createElement('ul');
+                    list.className = 'file-list';
+                    files.forEach(file => {
+                        const li = document.createElement('li');
+                        li.textContent = file;
+                        list.appendChild(li);
+                    });
+                    section.appendChild(list);
+                    sectionsEl.appendChild(section);
+                });
+
+                groupedFiles = grouped;
 
                 document.getElementById('sorter').style.display = 'none';
                 document.getElementById('results').style.display = 'block';
 
-                // Setup copy buttons
-                setupCopyButton('copyKeepBtn', keep);
-                setupCopyButton('copyDiscardBtn', discard);
-                setupCopyButton('copyUndecidedBtn', undecided);
+                document.getElementById('tabPosix').onclick = () => selectVariant('posix');
+                document.getElementById('tabMacos').onclick = () => selectVariant('macos');
 
-                // Also print to console for easy copying
-                console.log('\n=== SORTING RESULTS ===\n');
-                console.log('KEEP:', keep);
-                console.log('DISCARD:', discard);
-                console.log('UNDECIDED:', undecided);
+                selectVariant(isMacOS() ? 'macos' : 'posix');
             }
 
-            function setupCopyButton(buttonId, files) {
+            /**
+             * @param {string} buttonId
+             * @param {string} text
+             */
+            function setupCopyButton(buttonId, text) {
                 const button = document.getElementById(buttonId);
-                button.addEventListener('click', async () => {
-                    const text = files.join('\n');
+                button.textContent = 'Copy';
+                button.classList.remove('copied');
+                button.onclick = async () => {
                     try {
                         await navigator.clipboard.writeText(text);
                         button.textContent = 'Copied!';
@@ -415,37 +666,42 @@
                             button.textContent = 'Copy';
                         }, 2000);
                     }
-                });
+                };
             }
 
-            // Event listeners
+            /**
+             * @param {string} buttonId
+             * @param {string} text
+             * @param {string} filename
+             */
+            function setupDownloadButton(buttonId, text, filename) {
+                const button = document.getElementById(buttonId);
+                button.onclick = () => {
+                    const blob = new Blob([text], { type: 'text/x-shellscript' });
+                    const url = URL.createObjectURL(blob);
+                    const anchor = document.createElement('a');
+                    anchor.href = url;
+                    anchor.download = filename;
+                    document.body.appendChild(anchor);
+                    anchor.click();
+                    document.body.removeChild(anchor);
+                    URL.revokeObjectURL(url);
+                };
+            }
+
             document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
             document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
-
-            document.getElementById('keepBtn').addEventListener('click', () => {
-                setDecision('keep');
-                navigate(1);
-            });
-
-            document.getElementById('discardBtn').addEventListener('click', () => {
-                setDecision('discard');
-                navigate(1);
-            });
 
             document.addEventListener('keydown', e => {
                 if (document.getElementById('results').style.display !== 'none') return;
 
+                if (e.key >= '1' && e.key <= '9') {
+                    e.preventDefault();
+                    assignByDigit(Number(e.key));
+                    return;
+                }
+
                 switch (e.key) {
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        setDecision('discard');
-                        navigate(1);
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        setDecision('keep');
-                        navigate(1);
-                        break;
                     case 'ArrowUp':
                         e.preventDefault();
                         navigate(-1);
@@ -457,7 +713,6 @@
                 }
             });
 
-            // Load images on page load
             loadImages();
         </script>
     </body>
