@@ -2266,7 +2266,7 @@
                     ['/', 'focus the omnibar (Esc releases it)'],
                     ['↑/↓, Enter', 'in the omnibar: move / pick a match'],
                     [`${mod}+1-9`, 'in the omnibar: jump to that row'],
-                    [`${mod}+N`, 'new category'],
+                    ['+', `new category (or ${mod}+N where the browser allows it)`],
                     [`${mod}+Z / ${mod}${isMacPlatform() ? '⇧Z' : '+Y'}`, 'undo / redo'],
                 ];
                 openPopup({
@@ -2469,7 +2469,8 @@
                     return;
                 }
 
-                // ⌘N / Ctrl+N — new category (works in both focus modes).
+                // ⌘N / Ctrl+N — new category. Best-effort: browsers usually keep
+                // Cmd/Ctrl+N for "new window" and won't let the page have it.
                 if (platformMod && !otherMod && !e.altKey && k === 'n') {
                     e.preventDefault();
                     createFolder();
@@ -2478,6 +2479,13 @@
 
                 // The omnibar input handles its own keys; don't double-act on them.
                 if (inOmnibar) return;
+
+                // "+" (Shift+=) — the reliable new-category key (nothing claims it).
+                if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '+') {
+                    e.preventDefault();
+                    createFolder();
+                    return;
+                }
 
                 // "/" jumps focus to the omnibar (primary way in hotkeys mode).
                 if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '/') {

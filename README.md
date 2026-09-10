@@ -10,7 +10,7 @@ navigational reference (a symlink, or a `.lnk` shortcut on Windows) back to it.
 
 - Clean, distraction-free interface
 - Put each image in one or more categories with single keystrokes
-- Create new categories on the fly (`⌘N` / `Ctrl+N`, or the button)
+- Create new categories on the fly (`+`, or the button)
 - Navigate back to change previous decisions
 - Generates a POSIX `sh`, macOS `zsh`, or Windows PowerShell script to copy or
   download — the canonical single store, references not moves, nothing deleted
@@ -124,8 +124,9 @@ In **directory + `-r`** mode, every distinct discovered category is added after
 `trash`, in first-seen order, and each image starts in its own discovered
 category.
 
-User-created categories come next, in creation order — `⌘N` / `Ctrl+N` or the
-**+ New category** button opens a small in-app popup (name, inline validation).
+User-created categories come next, in creation order — `+` (or the
+**+ New category** button) opens a small in-app popup (name, inline validation).
+`⌘N` / `Ctrl+N` also works where the browser doesn't reserve it.
 A newly created category is immediately applied to the current image. Discovered
 categories bypass the separator rule — they legitimately contain `/`.
 
@@ -133,7 +134,7 @@ Categories are keyed: the 1st–9th by digits `1`-`9`, the 10th onward by bare
 letters `a`-`z`. Cap is **35** (9 digits + 26 letters). Each button shows its
 key badge, name, and a **live count** of how many images currently carry that
 label (booru-style, e.g. `landscape 42`). ⌘/Ctrl + letter is reserved for
-actions (`⌘N` / `Ctrl+N` = new category).
+actions.
 
 ## Controls
 
@@ -179,7 +180,8 @@ a `⌨` / `🔍` indicator of the current mode.
   (below). Ignored while ⌘/Ctrl/Alt is held, or — in Search mode — while the
   omnibar holds focus.
 - **/**: focus the omnibar · **Esc** in it: clear, then release focus
-- **⌘N** / **Ctrl+N**: create a new category (auto-applied to the current image)
+- **+** (`Shift+=`): create a new category (auto-applied to the current image).
+  `⌘N` / `Ctrl+N` too, where the browser allows it
 - **Space** / **Down Arrow**: next image · **Up Arrow**: previous image
 - **?** button (dock): full shortcut list + "Clear session"
 
