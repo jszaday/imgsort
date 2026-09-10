@@ -211,6 +211,8 @@ a `⌨` / `🔍` indicator of the current mode.
 - **+** (`Shift+=`): create a new category (auto-applied to the current image).
   `⌘N` / `Ctrl+N` too, where the browser allows it
 - **Space** / **Down Arrow**: next image · **Up Arrow**: previous image
+- **Enter** (outside the omnibar): open the **results popup** (also the **☑**
+  dock button; auto-opens when you advance past the last image)
 - **Swipe** (drag or two-finger) on the image: left → next, right → previous
 - **?** button (dock): full shortcut list + "Clear session"
 
@@ -270,7 +272,9 @@ and passing a flag updates the stored pref. `--out` follows the same rule
 session confirm, the keyboard reference and the Options menu are small
 focus-trapped popups (dimmed backdrop, `Esc` cancels, `Enter` confirms a
 non-destructive primary, click-outside cancels), theme-tokenized for light and
-dark.
+dark. The **results popup** is a larger modal on the same pattern (`Esc` /
+click-scrim / focus-trap close), opened over the sorter rather than swapping it
+out.
 
 ## Sessions
 
@@ -282,9 +286,13 @@ powers both undo/redo and resume.
 - **Undo / redo** — `⌘Z` / `Ctrl+Z` and `⌘⇧Z` / `Ctrl+Y` (also from inside the
   omnibar), or the `↶` / `↷` buttons in the dock. Undo jumps you back to the
   image it changed.
-- **Autosave** — unless started with `--no-session`, every decision and
-  navigation is debounced-saved (~0.5s) to `.imgsort-session.json` in the start
-  directory (a hidden dotfile; also flagged hidden on Windows). A small
+- **Autosave** — unless started with `--no-session`, every real decision
+  (toggle / create / set / undo / redo / an Actions-tab disable or delete) is
+  debounced-saved (~0.5s) to `.imgsort-session.json` in the start directory (a
+  hidden dotfile; also flagged hidden on Windows). Plain navigation does **not**
+  trigger a save on its own — the cursor position rides along on the next real
+  decision, and an immediate flush on tab-hide / page-hide
+  (`navigator.sendBeacon`) captures it if you quit after only browsing. A small
   `saving… / saved ✓` indicator sits in the dock.
 - **Resume** — on the next launch the saved log is **rolled forward onto the
   current scan's base**: saved decisions win, and any decision whose image is no
@@ -305,12 +313,36 @@ powers both undo/redo and resume.
 1. Start the server against your images
 2. Page through them, toggling each image into one or more categories
 3. Go back anytime to change a decision
-4. After the last image, the end screen is an interactive **checklist**: one
-   collapsible group per non-empty category. An image appears under **every**
-   category it's in; each checkbox toggles **that one reference**. The canonical
-   move-into-the-store happens once as long as the image is checked in at least
-   one group. Groups have a master checkbox and a collapse toggle. The script
-   re-renders live.
+4. Open the **results popup** at any point — press **Enter**, click the **☑**
+   dock button, or just advance past the last image (it auto-opens). Closing it
+   drops you back on the current image; you can keep sorting and re-open. Each
+   open regenerates the store name and rebuilds from the current sort.
+
+### The results popup
+
+A large in-app modal (same scrim / Esc / focus-trap as the other popups) with a
+top tab bar:
+
+- **Script** (default) — the generated script _is_ the checklist, rendered as a
+  monospace block with a left **gutter**. Each line that realizes one
+  `(category, image)` navigational reference (`ln -nfs`, or the Windows `.lnk`
+  block) gets a **checkbox in the gutter**; every other line (shebang, `mkdir`,
+  the `echo` / `mv` intern pair) has an empty gutter cell. Untick a line and it
+  renders dim and `# `-commented and that reference drops; untick an image's
+  last reference and its intern / `mkdir` lines vanish on the re-render.
+  POSIX / macOS / Windows sub-tabs (auto-selected by your OS) each with
+  **Copy** / **Download** — the emitted script is rebuilt clean from the ticked
+  lines only (the `# ` lines are a display affordance, never copied). The active
+  script is also `console.log`'d.
+- one tab **per non-empty category** in on-screen order (`landscape (12)`) — the
+  per-group checklist, one row per image with a checkbox bound to the same
+  reference as the matching script line, so toggling either updates both. A
+  group master checkbox ticks / unticks the whole group. `trash`'s hint stays
+  "interned, no reference".
+- **Actions** — the transaction log, oldest first. Each row has **Disable**
+  (keeps the entry in the log — and the session file — but stops applying it;
+  the row shows struck-through) and **✕ Delete** (removes it for good). Both
+  re-derive the sort, clear the redo stack, and refresh every view.
 
 ### The single store + references model
 
@@ -335,10 +367,10 @@ Nothing is moved into category folders and **nothing is deleted**. Instead:
 
 ### Script tabs
 
-Below the checklist, the generated script has three tabs, each with **Copy** and
-**Download**. It has no `cd` and runs from the directory the images are relative
-to (where the server started). All POSIX/macOS paths stay forward-slash; the
-Windows tab uses backslashes.
+The Script tab of the results popup has three sub-tabs, each with **Copy** and
+**Download**. The script has no `cd` and runs from the directory the images are
+relative to (where the server started). All POSIX/macOS paths stay
+forward-slash; the Windows tab uses backslashes.
 
 | Tab          | File              | Lowering                                                                                                                                                                                                      |
 | ------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -392,7 +424,9 @@ The pure, DOM-free logic lives in `lib/*.js` ES modules — `hash.js` (FNV-1a),
 `applyToggle`, key badges, and `countLabels` / `applyCountDelta` for the live
 per-label counts), `txns.js` (`replay()` folds the transaction log onto the
 discovered base),
-`script.js` (`buildOps` + the POSIX / Windows lowerers), `scan.js` (`parseArgs`,
+`script.js` (`buildOps` + the POSIX / Windows lowerers — each returns
+`{ text, lines }` where a `Line` may carry the `(category, path)` `ref` that
+drives the script-view gutter checkboxes), `scan.js` (`parseArgs`,
 `isImageFile`, `collectFromDir`). `server.js` imports them directly; the browser
 loads them from the `/lib/<name>.js` route, and `index.html`'s inline
 `<script type="module">` keeps only the DOM wiring. `index.html` stays a single

@@ -118,7 +118,10 @@ describe('lowerPosix', () => {
     const opts = { shebang: '#!/bin/sh', out: '.', storeName: STORE };
 
     it('emits "nothing to do" for an empty op list', () => {
-        expect(lowerPosix([], opts)).toBe('#!/bin/sh\nset -e\n\n# nothing to do\n');
+        const { text, lines } = lowerPosix([], opts);
+        expect(text).toBe('#!/bin/sh\nset -e\n\n# nothing to do\n');
+        expect(lines.every(l => !l.ref)).toBe(true);
+        expect(lines.map(l => l.text).join('\n') + '\n').toBe(text);
     });
 
     it('reference target climbs ../ once per category segment', () => {
@@ -129,8 +132,8 @@ describe('lowerPosix', () => {
                 assign: { 'src.png': ['a/b/c'] },
             })
         );
-        const script = lowerPosix(ops, opts);
-        expect(script).toContain(`ln -nfs '../../../${STORE}/src.png' '${'a/b/c'}/src.png'`);
+        const { text } = lowerPosix(ops, opts);
+        expect(text).toContain(`ln -nfs '../../../${STORE}/src.png' '${'a/b/c'}/src.png'`);
     });
 
     it('loudly echoes each intern before moving it', () => {
@@ -141,9 +144,9 @@ describe('lowerPosix', () => {
                 assign: { 'd/x.png': ['a'] },
             })
         );
-        const script = lowerPosix(ops, opts);
-        expect(script).toContain(`echo 'interning into single store: ./d/x.png -> ${STORE}/x.png'`);
-        expect(script).toContain(`mv -i './d/x.png' '${STORE}/x.png'`);
+        const { text } = lowerPosix(ops, opts);
+        expect(text).toContain(`echo 'interning into single store: ./d/x.png -> ${STORE}/x.png'`);
+        expect(text).toContain(`mv -i './d/x.png' '${STORE}/x.png'`);
     });
 
     it('shell-escapes a name containing a quote', () => {
@@ -154,8 +157,8 @@ describe('lowerPosix', () => {
                 assign: { "it's.png": ['a'] },
             })
         );
-        const script = lowerPosix(ops, opts);
-        expect(script).toContain("mv -i './it'\\''s.png'");
+        const { text } = lowerPosix(ops, opts);
+        expect(text).toContain("mv -i './it'\\''s.png'");
     });
 
     it('honours --out as a path prefix', () => {
@@ -167,9 +170,46 @@ describe('lowerPosix', () => {
                 out: 'sorted',
             })
         );
-        const script = lowerPosix(ops, { ...opts, out: 'sorted' });
-        expect(script).toContain(`mkdir -p 'sorted/${STORE}'`);
-        expect(script).toContain(`ln -nfs '../${STORE}/x.png' 'sorted/a/x.png'`);
+        const { text } = lowerPosix(ops, { ...opts, out: 'sorted' });
+        expect(text).toContain(`mkdir -p 'sorted/${STORE}'`);
+        expect(text).toContain(`ln -nfs '../${STORE}/x.png' 'sorted/a/x.png'`);
+    });
+
+    it('tags only the ln -nfs line with its (category,path) ref; text reconstructs', () => {
+        const ops = buildOps(
+            state({
+                images: ['d/x.png'],
+                folders: ['uncategorized', 'trash', 'a'],
+                assign: { 'd/x.png': ['a'] },
+            })
+        );
+        const { text, lines } = lowerPosix(ops, opts);
+        const refLines = lines.filter(l => l.ref);
+        expect(refLines).toHaveLength(1);
+        expect(refLines.map(l => l.text.startsWith('ln -nfs '))).toEqual([true]);
+        expect(refLines.map(l => l.ref)).toEqual([{ category: 'a', path: 'd/x.png' }]);
+        // mkdir / echo / intern / header carry no ref
+        const prefixes = ['mkdir ', 'mv -i ', 'echo ', '#!/bin/sh'];
+        expect(lines.filter(l => prefixes.some(p => l.text.startsWith(p))).some(l => l.ref)).toBe(
+            false
+        );
+        expect(lines.map(l => l.text).join('\n') + '\n').toBe(text);
+    });
+
+    it('keepUncheckedRefs emits an (unchecked) ref line the clean build omits', () => {
+        const base = {
+            images: ['x.png'],
+            folders: ['uncategorized', 'trash', 'a', 'b'],
+            assign: { 'x.png': ['a', 'b'] },
+            checked: [refKey('a', 'x.png')], // b is unchecked
+        };
+        const clean = lowerPosix(buildOps(state(base)), opts).lines.filter(l => l.ref);
+        expect(clean.map(l => l.ref?.category)).toEqual(['a']);
+        const full = lowerPosix(
+            buildOps({ ...state(base), keepUncheckedRefs: true }),
+            opts
+        ).lines.filter(l => l.ref);
+        expect(full.map(l => l.ref?.category).sort()).toEqual(['a', 'b']);
     });
 });
 
@@ -177,7 +217,9 @@ describe('lowerWindows', () => {
     const opts = { out: '.', storeName: STORE };
 
     it('emits "nothing to do" for an empty op list', () => {
-        expect(lowerWindows([], opts)).toBe("$ErrorActionPreference = 'Stop'\n\n# nothing to do\n");
+        const { text, lines } = lowerWindows([], opts);
+        expect(text).toBe("$ErrorActionPreference = 'Stop'\n\n# nothing to do\n");
+        expect(lines.every(l => !l.ref)).toBe(true);
     });
 
     it('creates a .lnk via WScript.Shell with an absolute Join-Path target', () => {
@@ -188,12 +230,12 @@ describe('lowerWindows', () => {
                 assign: { 'd/x.png': ['a'] },
             })
         );
-        const script = lowerWindows(ops, opts);
-        expect(script).toContain('$ws = New-Object -ComObject WScript.Shell');
+        const { text } = lowerWindows(ops, opts);
+        expect(text).toContain('$ws = New-Object -ComObject WScript.Shell');
         // link lives under <out>/<category>, target is the absolute store path
-        expect(script).toContain("$s = $ws.CreateShortcut((Join-Path $root 'a\\x.png.lnk'))");
-        expect(script).toContain(`$s.TargetPath = (Join-Path $root '${STORE}\\x.png')`);
-        expect(script).toContain('$s.Save()');
+        expect(text).toContain("$s = $ws.CreateShortcut((Join-Path $root 'a\\x.png.lnk'))");
+        expect(text).toContain(`$s.TargetPath = (Join-Path $root '${STORE}\\x.png')`);
+        expect(text).toContain('$s.Save()');
     });
 
     it('marks the store dir Hidden and uses backslash paths', () => {
@@ -204,9 +246,9 @@ describe('lowerWindows', () => {
                 assign: { 'd/x.png': ['a'] },
             })
         );
-        const script = lowerWindows(ops, opts);
-        expect(script).toContain(`(Get-Item '${STORE}').Attributes += 'Hidden'`);
-        expect(script).toContain(
+        const { text } = lowerWindows(ops, opts);
+        expect(text).toContain(`(Get-Item '${STORE}').Attributes += 'Hidden'`);
+        expect(text).toContain(
             `Move-Item -LiteralPath '.\\d\\x.png' -Destination '${STORE}\\x.png'`
         );
     });
@@ -219,7 +261,43 @@ describe('lowerWindows', () => {
                 assign: { "a'b/x.png": ["a'b"] },
             })
         );
-        const script = lowerWindows(ops, opts);
-        expect(script).toContain("Move-Item -LiteralPath '.\\a''b\\x.png'");
+        const { text } = lowerWindows(ops, opts);
+        expect(text).toContain("Move-Item -LiteralPath '.\\a''b\\x.png'");
+    });
+
+    it('tags every line of the .lnk block with the ref, and nothing else; text reconstructs', () => {
+        const ops = buildOps(
+            state({
+                images: ['d/x.png'],
+                folders: ['uncategorized', 'trash', 'a'],
+                assign: { 'd/x.png': ['a'] },
+            })
+        );
+        const { text, lines } = lowerWindows(ops, opts);
+        const refLines = lines.filter(l => l.ref);
+        expect(refLines).toHaveLength(4); // the 4-line WScript.Shell block
+        expect(new Set(refLines.map(l => JSON.stringify(l.ref)))).toEqual(
+            new Set([JSON.stringify({ category: 'a', path: 'd/x.png' })])
+        );
+        const noRef = ['New-Item ', 'Move-Item ', 'Write-Host ', '$ErrorActionPreference'];
+        expect(lines.filter(l => noRef.some(p => l.text.startsWith(p))).some(l => l.ref)).toBe(
+            false
+        );
+        expect(lines.map(l => l.text).join('\n') + '\n').toBe(text);
+    });
+});
+
+describe('buildOps reference op carries its source path', () => {
+    it('every reference op has a `path` equal to its image', () => {
+        const ops = buildOps(
+            state({
+                images: ['p/x.png'],
+                folders: ['uncategorized', 'trash', 'a', 'b'],
+                assign: { 'p/x.png': ['a', 'b'] },
+            })
+        );
+        const refs = ops.filter(o => o.op === 'reference');
+        expect(refs).toHaveLength(2);
+        expect(refs.every(r => r.path === 'p/x.png')).toBe(true);
     });
 });

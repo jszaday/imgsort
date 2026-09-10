@@ -101,6 +101,15 @@ automated check. Logic worth testing belongs in `lib/`, not inline.
   (e.g. the macOS/POSIX script tab auto-selects by platform but you can switch).
 - **Prefer in-app popups within the app's own z-order over native browser
   dialogs** (`alert` / `confirm` / `prompt`). A general rule of thumb here.
+- **Privacy: intermediates are file-local and explicitly surfaced, not a hidden
+  browser footprint.** The decision log, store / reference paths, and discovery
+  info live in files the user can see (`.imgsort-session.json`, the store).
+  The only acceptable browser-side residue is benign UI prefs
+  (`localStorage['imgsort-prefs']`) — not the decision log. `/image/` responses
+  are `Cache-Control: no-store` so photo bytes don't linger in the browser
+  cache. If a file write fails, surface it and offer a file path — don't
+  silently stash state in `localStorage` / cookies / IndexedDB. A user should
+  never have to clear browser storage to erase their work.
 - **The coordinator verifies subagent output before reporting it** — read the
   `git diff` and re-run lint/typecheck/format; don't relay an agent's summary
   on trust.

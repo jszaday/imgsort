@@ -26,3 +26,6 @@ Thumbs.db
 # imgsort runtime output (generated in the directory the server runs in)
 .imgsort-session.json
 .imgsort-store-*/
+
+# Claude Code agent worktrees
+.claude/worktrees/

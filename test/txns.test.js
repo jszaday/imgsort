@@ -37,6 +37,18 @@ describe('replay', () => {
         expect(cats(r, 'a.png')).toEqual(['trip', 'uncategorized']);
     });
 
+    it('skips a txn flagged disabled (Actions tab) but still applies its neighbours', () => {
+        const log = T([
+            { t: 'toggle', image: 'a.png', category: 'trip', disabled: true },
+            { t: 'toggle', image: 'c.png', category: 'trash' },
+        ]);
+        expect(cats(replay(base, log), 'a.png')).toEqual(['uncategorized']); // disabled -> not applied
+        expect(cats(replay(base, log), 'c.png')).toEqual(['trash']);
+        // clearing the flag re-applies it
+        const enabled = T([{ ...log[0], disabled: false }, log[1]]);
+        expect(cats(replay(base, enabled), 'a.png')).toEqual(['trip']);
+    });
+
     it('undo path: popping the last txn and replaying reverts it', () => {
         const log = T([
             { t: 'toggle', image: 'a.png', category: 'trip' },

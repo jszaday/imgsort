@@ -249,11 +249,6 @@
                 }
             }
 
-            #results {
-                position: relative;
-                z-index: 1;
-            }
-
             /* Bottom of the app z-order: the image, fit to the viewport. */
             .image-layer {
                 position: fixed;
@@ -887,56 +882,211 @@
                 background: transparent;
             }
 
-            .results {
-                padding: 40px;
-                max-width: 800px;
-                margin: 0 auto;
-                overflow-y: auto;
-                height: 100vh;
+            /* --- results modal (openResults) --- */
+            .results-modal-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 50;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                background: var(--scrim);
             }
 
-            .results h2 {
-                margin-bottom: 20px;
+            .results-modal {
+                display: flex;
+                flex-direction: column;
+                width: min(920px, 100%);
+                height: min(88vh, 940px);
+                background: var(--bg-1);
+                border: 1px solid var(--border);
+                border-radius: var(--r);
+                box-shadow: var(--shadow-dock);
+                overflow: hidden;
+            }
+
+            .results-modal-head {
+                display: flex;
+                align-items: baseline;
+                gap: 12px;
+                padding: 14px 18px;
+                border-bottom: 1px solid var(--border-soft);
+            }
+
+            .results-modal-title {
+                font-size: 15px;
+                font-weight: 600;
                 color: var(--text-dim);
             }
 
-            .results-section {
-                margin-bottom: 30px;
-                background: var(--bg-1);
-                padding: 20px;
-                border-radius: var(--r);
-            }
-
-            .results-section h3 {
-                margin-bottom: 15px;
-                font-size: 18px;
-                color: var(--accent);
-            }
-
-            .results-section.trash h3 {
-                color: var(--danger);
-            }
-
-            .results-section.uncategorized h3 {
-                color: var(--text-muted);
-            }
-
-            .file-list {
-                list-style: none;
+            .results-modal-sub {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
                 font-family: monospace;
-                font-size: 14px;
+                font-size: 11px;
+                color: var(--text-faint);
             }
 
-            .file-list li {
-                padding: 5px 0;
+            .results-modal-close {
+                flex: none;
+                background: var(--bg-plain);
+                color: var(--text);
+                border: none;
+                border-radius: var(--r-sm);
+                padding: 5px 10px;
+                font-size: 13px;
+                cursor: pointer;
+            }
+
+            .results-modal-close:hover {
+                background: var(--bg-plain-hover);
+            }
+
+            .results-tabs {
+                display: flex;
+                gap: 4px;
+                padding: 10px 18px 0;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+
+            .results-tab {
+                flex: none;
+                background: var(--bg-code);
+                color: var(--text-badge);
+                border: 1px solid var(--border-soft);
+                border-bottom: none;
+                padding: 7px 14px;
+                border-radius: var(--r) var(--r) 0 0;
+                cursor: pointer;
+                font-size: 13px;
+                white-space: nowrap;
+                transition: color 0.2s;
+            }
+
+            .results-tab:hover {
+                color: var(--text);
+            }
+
+            .results-tab.active {
+                background: var(--bg-2);
+                color: var(--text);
+                border-color: var(--border-strong);
+            }
+
+            .results-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 18px;
+            }
+
+            .results-blurb {
+                font-size: 12px;
+                line-height: 1.5;
+                color: var(--text-faint);
+                margin-bottom: 14px;
+            }
+
+            .script-view {
+                background: var(--bg-code);
+                border: 1px solid var(--border-soft);
+                border-radius: var(--r);
+                padding: 10px 0;
+                font-family: monospace;
+                font-size: 13px;
+                overflow-x: auto;
+            }
+
+            .script-row {
+                display: flex;
+                align-items: baseline;
+                padding: 0 12px;
+                white-space: pre;
+            }
+
+            .script-row.dim {
+                opacity: 0.45;
+            }
+
+            .script-gutter {
+                flex: none;
+                width: 22px;
+                align-self: center;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .script-gutter input[type='checkbox'] {
+                width: 13px;
+                height: 13px;
+                accent-color: var(--accent);
+                cursor: pointer;
+            }
+
+            .script-code {
+                flex: 1;
                 color: var(--text-code);
             }
 
-            .help-text {
-                text-align: center;
-                color: var(--text-faint);
+            .actions-empty {
+                font-size: 13px;
+                color: var(--text-muted);
+            }
+
+            .actions-list {
+                list-style: none;
+            }
+
+            .actions-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 6px 4px;
+                border-top: 1px solid var(--border-soft);
+                font-size: 13px;
+            }
+
+            .actions-row.disabled .actions-desc {
+                opacity: 0.5;
+                text-decoration: line-through;
+            }
+
+            .actions-desc {
+                flex: 1;
+                min-width: 0;
+                font-family: monospace;
+                color: var(--text-code);
+                overflow-wrap: anywhere;
+            }
+
+            .actions-btns {
+                flex: none;
+                display: flex;
+                gap: 6px;
+            }
+
+            .actions-btn {
+                background: var(--bg-plain);
+                color: var(--text);
+                border: none;
+                border-radius: var(--r-sm);
+                padding: 4px 10px;
                 font-size: 12px;
-                margin-top: 10px;
+                cursor: pointer;
+            }
+
+            .actions-btn:hover {
+                background: var(--bg-plain-hover);
+            }
+
+            .actions-btn.danger {
+                background: var(--danger-bg);
+                color: var(--danger);
             }
 
             .script-block {
@@ -1132,6 +1282,14 @@
                     >
                         Advance: Manual
                     </button>
+                    <button
+                        class="dock-btn"
+                        id="resultsBtn"
+                        type="button"
+                        title="Results: script &amp; per-category checklist (Enter)"
+                    >
+                        ☑
+                    </button>
                     <button class="dock-btn" id="optionsBtn" type="button" title="Options">
                         ⚙
                     </button>
@@ -1187,41 +1345,6 @@
                     </div>
 
                     <div class="folders" id="folders"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="results" style="display: none">
-            <div class="results">
-                <h2>Sorting Complete!</h2>
-
-                <p class="help-text" style="text-align: left; margin-bottom: 15px">
-                    Nothing is moved into category folders and nothing is deleted. Each checked item
-                    is moved <em>once</em> into a single hidden per-run store, and every category
-                    you keep it in gets a lightweight navigational reference (symlink, or a
-                    <code>.lnk</code> shortcut on Windows) pointing back at the store. Trash items
-                    are interned but left unreferenced — recoverable from the store, never removed.
-                    Uncheck a box to drop that one reference. The script updates live.
-                </p>
-
-                <div id="checklist"></div>
-
-                <div class="results-section">
-                    <h3>Generated script</h3>
-                    <div class="script-tabs">
-                        <button class="script-tab" id="tabPosix" data-variant="posix">
-                            POSIX sh
-                        </button>
-                        <button class="script-tab" id="tabMacos" data-variant="macos">macOS</button>
-                        <button class="script-tab" id="tabWindows" data-variant="windows">
-                            Windows
-                        </button>
-                    </div>
-                    <div class="script-actions">
-                        <button class="copy-btn" id="copyScriptBtn">Copy</button>
-                        <button class="copy-btn" id="downloadScriptBtn">Download</button>
-                    </div>
-                    <pre class="script-block" id="scriptBlock"></pre>
                 </div>
             </div>
         </div>
@@ -1778,7 +1901,9 @@
                 updateNavArrows();
                 renderFolders();
                 maybeRefocusOmnibar();
-                scheduleSave();
+                // Pure navigation is not a decision — no autosave here. Position
+                // (meta.currentIndex / frontier) rides along on the next real
+                // mutation, and flushSessionNow() captures it on exit.
             }
 
             // Category buttons: rebuild the DOM only when the folder SET or the
@@ -1890,7 +2015,7 @@
                 if (newIndex >= 0 && newIndex < images.length) {
                     showImage(newIndex);
                 } else if (newIndex >= images.length) {
-                    showResults();
+                    openResults();
                 }
             }
 
@@ -2098,33 +2223,43 @@
                 return `.imgsort-store-${ts}-${uuid}`;
             }
 
-            /** @type {Object.<string, string[]>} */
+            // ---- results popup (script + per-group checklist + actions) -------
+            // The script view *is* the checklist rendered as a script: every
+            // `(category,image)` reference is one `checkedRefs` entry, toggled
+            // from either a script-line gutter checkbox or a group-tab row.
+
+            /** @type {Object.<string, string[]>} group -> image paths (membership) */
             let groupedFiles = {};
             /** @type {'posix' | 'macos' | 'windows'} */
             let scriptVariant = 'posix';
-            /** @type {Set<string>} */
+            /** @type {Set<string>} "cat\npath" refs currently kept */
             let checkedRefs = new Set();
-            /** @type {Set<string>} */
-            let collapsedFolders = new Set();
-            /** @type {Object.<string, string>} */
+            /** @type {Object.<string, string>} image path -> discovered category */
             let discoveredByPath = {};
-            /** Baked into both script tabs so they agree on the store name. */
+            /** Generated once per popup open so all script sub-tabs agree. */
             let storeName = '';
+            /** @type {HTMLElement | null} the results overlay while open */
+            let resultsEl = null;
+            /** @type {(() => void) | null} */
+            let resultsCleanup = null;
+            /** @type {'script' | 'actions' | string} active results tab */
+            let resultsTab = 'script';
 
             const VARIANTS = {
-                posix: { file: 'imgsort.sh', tab: 'tabPosix' },
-                macos: { file: 'imgsort.command', tab: 'tabMacos' },
-                windows: { file: 'imgsort.ps1', tab: 'tabWindows' },
+                posix: { file: 'imgsort.sh', label: 'POSIX sh' },
+                macos: { file: 'imgsort.command', label: 'macOS' },
+                windows: { file: 'imgsort.ps1', label: 'Windows' },
             };
 
-            function selectVariant(variant) {
-                scriptVariant = variant;
-                Object.keys(VARIANTS).forEach(v => {
-                    document
-                        .getElementById(VARIANTS[v].tab)
-                        .classList.toggle('active', v === variant);
-                });
-                renderScript();
+            /** Auto-selected script sub-tab for the viewer's platform. */
+            function defaultVariant() {
+                return isWindowsPlatform() ? 'windows' : isMacPlatform() ? 'macos' : 'posix';
+            }
+
+            /** @param {string} p */
+            function baseName(p) {
+                const i = p.lastIndexOf('/');
+                return i >= 0 ? p.slice(i + 1) : p;
             }
 
             /** Assemble the pure ScriptState from the current module state. */
@@ -2141,178 +2276,434 @@
                 };
             }
 
+            /** Lower an op list for the active sub-tab. Returns { text, lines }. */
+            function lower(ops) {
+                const out = scriptOptions.out || '.';
+                return scriptVariant === 'windows'
+                    ? lowerWindows(ops, { out, storeName })
+                    : lowerPosix(ops, {
+                          shebang: scriptVariant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh',
+                          out,
+                          storeName,
+                      });
+            }
+
+            /** Clean script for copy/download: unchecked refs simply absent. */
+            function scriptText() {
+                return lower(buildOps(scriptState())).text;
+            }
+
             /** Category-group hint path, e.g. `sorted/trip/rome`. */
             function outDisplayPath(cat) {
                 const out = scriptOptions.out || '.';
                 return out === '.' ? cat : `${out}/${cat}`;
             }
 
-            function renderScript() {
-                const out = scriptOptions.out || '.';
-                const ops = buildOps(scriptState());
-                const script =
-                    scriptVariant === 'windows'
-                        ? lowerWindows(ops, { out, storeName })
-                        : lowerPosix(ops, {
-                              shebang: scriptVariant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh',
-                              out,
-                              storeName,
-                          });
-
-                document.getElementById('scriptBlock').textContent = script;
-
-                const downloadName = VARIANTS[scriptVariant].file;
-                setupCopyButton('copyScriptBtn', script);
-                setupDownloadButton('downloadScriptBtn', script, downloadName);
-
-                console.log(`\n=== GENERATED SCRIPT (${downloadName}) ===\n`);
-                console.log(script);
+            /** Toggle one reference and re-render the visible results view. */
+            function toggleRef(key, on) {
+                if (on) checkedRefs.add(key);
+                else checkedRefs.delete(key);
+                renderResultsBody();
             }
 
-            function renderChecklist() {
-                const container = document.getElementById('checklist');
-                container.innerHTML = '';
-
-                folders.forEach((folder, gi) => {
-                    const files = groupedFiles[folder] || [];
-                    if (files.length === 0) return;
-
-                    const group = document.createElement('div');
-                    group.className = `checklist-group ${folder}`;
-                    const collapsed = collapsedFolders.has(folder);
-                    if (collapsed) group.classList.add('collapsed');
-
-                    const header = document.createElement('div');
-                    header.className = 'checklist-header';
-
-                    const caret = document.createElement('span');
-                    caret.className = 'caret';
-                    caret.textContent = collapsed ? '▶' : '▼';
-
-                    const master = document.createElement('input');
-                    master.type = 'checkbox';
-
-                    const name = document.createElement('span');
-                    name.className = 'group-name';
-                    name.textContent = toDisplay(folder);
-
-                    const count = document.createElement('span');
-                    count.className = 'group-count';
-                    count.textContent = `(${files.length})`;
-
-                    const hint = document.createElement('span');
-                    hint.className = 'group-hint';
-                    hint.textContent =
-                        folder === 'trash'
-                            ? '→ interned, no reference'
-                            : `→ ${toDisplay(outDisplayPath(folder))}/`;
-
-                    header.appendChild(caret);
-                    header.appendChild(master);
-                    header.appendChild(name);
-                    header.appendChild(count);
-                    header.appendChild(hint);
-
-                    const list = document.createElement('ul');
-                    list.className = 'checklist-items';
-
-                    /** @type {{ box: HTMLInputElement, file: string }[]} */
-                    const items = [];
-
-                    const syncMaster = () => {
-                        const checkedCount = items.filter(item => item.box.checked).length;
-                        master.checked = checkedCount === items.length;
-                        master.indeterminate = checkedCount > 0 && checkedCount < items.length;
-                    };
-
-                    files.forEach((file, ii) => {
-                        const li = document.createElement('li');
-                        const key = refKey(folder, file);
-
-                        const box = document.createElement('input');
-                        box.type = 'checkbox';
-                        box.id = `chk_${gi}_${ii}`;
-                        box.checked = checkedRefs.has(key);
-
-                        const label = document.createElement('label');
-                        label.htmlFor = box.id;
-                        label.textContent = toDisplay(file);
-
-                        box.addEventListener('change', () => {
-                            if (box.checked) checkedRefs.add(key);
-                            else checkedRefs.delete(key);
-                            syncMaster();
-                            renderScript();
-                        });
-
-                        items.push({ box, file });
-                        li.appendChild(box);
-                        li.appendChild(label);
-                        list.appendChild(li);
+            function renderResultsTabs() {
+                const bar = document.getElementById('resultsTabs');
+                if (!bar) return;
+                bar.innerHTML = '';
+                /** @type {[string, string][]} */
+                const defs = [['script', 'Script']];
+                displayFolders().forEach(f => {
+                    const n = (groupedFiles[f] || []).length;
+                    if (n) defs.push([f, `${toDisplay(f)} (${n})`]);
+                });
+                defs.push(['actions', `Actions (${txns.length})`]);
+                defs.forEach(([key, label]) => {
+                    const t = document.createElement('button');
+                    t.type = 'button';
+                    t.className = 'results-tab' + (resultsTab === key ? ' active' : '');
+                    t.textContent = label;
+                    t.addEventListener('click', () => {
+                        resultsTab = key;
+                        renderResultsTabs();
+                        renderResultsBody();
                     });
-
-                    syncMaster();
-
-                    master.addEventListener('click', e => e.stopPropagation());
-                    master.addEventListener('change', () => {
-                        items.forEach(({ box, file }) => {
-                            box.checked = master.checked;
-                            if (master.checked) checkedRefs.add(refKey(folder, file));
-                            else checkedRefs.delete(refKey(folder, file));
-                        });
-                        master.indeterminate = false;
-                        renderScript();
-                    });
-
-                    header.addEventListener('click', () => {
-                        const nowCollapsed = group.classList.toggle('collapsed');
-                        if (nowCollapsed) collapsedFolders.add(folder);
-                        else collapsedFolders.delete(folder);
-                        caret.textContent = nowCollapsed ? '▶' : '▼';
-                    });
-
-                    group.appendChild(header);
-                    group.appendChild(list);
-                    container.appendChild(group);
+                    bar.appendChild(t);
                 });
             }
 
-            function showResults() {
-                storeName = genStoreName();
+            function renderResultsBody() {
+                const body = document.getElementById('resultsBody');
+                if (!body) return;
+                const scroll = body.scrollTop;
+                body.innerHTML = '';
+                if (resultsTab === 'script') renderScriptTab(body);
+                else if (resultsTab === 'actions') renderActionsTab(body);
+                else if ((groupedFiles[resultsTab] || []).length) renderGroupTab(body, resultsTab);
+                else {
+                    resultsTab = 'script';
+                    renderResultsTabs();
+                    renderScriptTab(body);
+                }
+                body.scrollTop = scroll;
+            }
 
+            function renderScriptTab(root) {
+                const blurb = document.createElement('p');
+                blurb.className = 'results-blurb';
+                blurb.textContent =
+                    'Each ticked line moves its image once into the hidden per-run store ' +
+                    `(${storeName}) and points its category at it with a lightweight ` +
+                    'navigational reference (a symlink, or a .lnk on Windows). Trash items ' +
+                    'are interned but never referenced; nothing is deleted. Untick a line ' +
+                    'to drop that one reference — the copied script just omits it.';
+                root.appendChild(blurb);
+
+                const subTabs = document.createElement('div');
+                subTabs.className = 'script-tabs';
+                Object.keys(VARIANTS).forEach(v => {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'script-tab' + (scriptVariant === v ? ' active' : '');
+                    b.textContent = VARIANTS[v].label;
+                    b.addEventListener('click', () => {
+                        scriptVariant = v;
+                        renderResultsBody();
+                    });
+                    subTabs.appendChild(b);
+                });
+                root.appendChild(subTabs);
+
+                const actions = document.createElement('div');
+                actions.className = 'script-actions';
+                const copyBtn = document.createElement('button');
+                copyBtn.type = 'button';
+                copyBtn.className = 'copy-btn';
+                copyBtn.id = 'copyScriptBtn';
+                copyBtn.textContent = 'Copy';
+                const dlBtn = document.createElement('button');
+                dlBtn.type = 'button';
+                dlBtn.className = 'copy-btn';
+                dlBtn.id = 'downloadScriptBtn';
+                dlBtn.textContent = 'Download';
+                actions.append(copyBtn, dlBtn);
+                root.appendChild(actions);
+
+                const clean = scriptText();
+                setupCopyButton('copyScriptBtn', clean);
+                setupDownloadButton('downloadScriptBtn', clean, VARIANTS[scriptVariant].file);
+
+                console.log(`\n=== GENERATED SCRIPT (${VARIANTS[scriptVariant].file}) ===\n`);
+                console.log(clean);
+
+                // Display lowering keeps the unchecked ref lines so they show
+                // dim + `# `-commented; a fully-unchecked image drops out entirely.
+                const { lines } = lower(buildOps({ ...scriptState(), keepUncheckedRefs: true }));
+                const view = document.createElement('div');
+                view.className = 'script-view';
+                lines.forEach((line, i) => {
+                    const ref = line.ref;
+                    const prev = lines[i - 1];
+                    const runStart =
+                        ref &&
+                        !(
+                            prev &&
+                            prev.ref &&
+                            prev.ref.category === ref.category &&
+                            prev.ref.path === ref.path
+                        );
+                    const key = ref ? refKey(ref.category, ref.path) : '';
+                    const unchecked = ref ? !checkedRefs.has(key) : false;
+
+                    const row = document.createElement('div');
+                    row.className = 'script-row' + (unchecked ? ' dim' : '');
+                    const gutter = document.createElement('span');
+                    gutter.className = 'script-gutter';
+                    if (ref && runStart) {
+                        const box = document.createElement('input');
+                        box.type = 'checkbox';
+                        box.checked = !unchecked;
+                        box.title = `${toDisplay(ref.category)} / ${toDisplay(ref.path)}`;
+                        box.addEventListener('change', () => toggleRef(key, box.checked));
+                        gutter.appendChild(box);
+                    }
+                    const code = document.createElement('span');
+                    code.className = 'script-code';
+                    code.textContent = (unchecked ? '# ' : '') + line.text;
+                    row.append(gutter, code);
+                    view.appendChild(row);
+                });
+                root.appendChild(view);
+            }
+
+            function renderGroupTab(root, folder) {
+                const files = groupedFiles[folder] || [];
+                const group = document.createElement('div');
+                group.className = `checklist-group ${folder}`;
+
+                const header = document.createElement('div');
+                header.className = 'checklist-header';
+                header.style.cursor = 'default';
+
+                const master = document.createElement('input');
+                master.type = 'checkbox';
+                const name = document.createElement('span');
+                name.className = 'group-name';
+                name.textContent = toDisplay(folder);
+                const count = document.createElement('span');
+                count.className = 'group-count';
+                count.textContent = `(${files.length})`;
+                const hint = document.createElement('span');
+                hint.className = 'group-hint';
+                hint.textContent =
+                    folder === 'trash'
+                        ? '→ interned, no reference'
+                        : `→ ${toDisplay(outDisplayPath(folder))}/`;
+                header.append(master, name, count, hint);
+
+                const list = document.createElement('ul');
+                list.className = 'checklist-items';
+                list.style.paddingLeft = '12px';
+
+                /** @type {HTMLInputElement[]} */
+                const boxes = [];
+                files.forEach((file, ii) => {
+                    const li = document.createElement('li');
+                    const key = refKey(folder, file);
+                    const box = document.createElement('input');
+                    box.type = 'checkbox';
+                    box.id = `grp_${ii}`;
+                    box.checked = checkedRefs.has(key);
+                    box.addEventListener('change', () => toggleRef(key, box.checked));
+                    const label = document.createElement('label');
+                    label.htmlFor = box.id;
+                    label.textContent = toDisplay(file);
+                    li.append(box, label);
+                    list.appendChild(li);
+                    boxes.push(box);
+                });
+
+                const checked = boxes.filter(b => b.checked).length;
+                master.checked = boxes.length > 0 && checked === boxes.length;
+                master.indeterminate = checked > 0 && checked < boxes.length;
+                master.addEventListener('change', () => {
+                    files.forEach(file => {
+                        const k = refKey(folder, file);
+                        if (master.checked) checkedRefs.add(k);
+                        else checkedRefs.delete(k);
+                    });
+                    renderResultsBody();
+                });
+
+                group.append(header, list);
+                root.appendChild(group);
+            }
+
+            /** @param {Txn} tx */
+            function txnDescription(tx) {
+                if (tx.t === 'toggle') {
+                    return `toggle  ${toDisplay(tx.category)} ↔ ${toDisplay(baseName(tx.image))}`;
+                }
+                if (tx.t === 'set') {
+                    const cats = (tx.categories || []).map(c => toDisplay(c)).join(', ') || '∅';
+                    return `set  ${toDisplay(baseName(tx.image))} → {${cats}}`;
+                }
+                if (tx.t === 'create') {
+                    return `＋ created ${toDisplay(tx.name)} (applied to ${toDisplay(
+                        baseName(tx.image)
+                    )})`;
+                }
+                return JSON.stringify(tx);
+            }
+
+            function renderActionsTab(root) {
+                const blurb = document.createElement('p');
+                blurb.className = 'results-blurb';
+                blurb.textContent =
+                    'Every sorting decision, oldest first. Disable keeps an entry in the log ' +
+                    'but stops applying it (round-trips through the session file); Delete drops ' +
+                    'it for good. Both re-derive the sort and clear the redo stack.';
+                root.appendChild(blurb);
+
+                if (txns.length === 0) {
+                    const empty = document.createElement('p');
+                    empty.className = 'actions-empty';
+                    empty.textContent = 'No decisions yet.';
+                    root.appendChild(empty);
+                    return;
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'actions-list';
+                txns.forEach((tx, idx) => {
+                    const li = document.createElement('li');
+                    li.className = 'actions-row' + (tx.disabled ? ' disabled' : '');
+                    const desc = document.createElement('span');
+                    desc.className = 'actions-desc';
+                    desc.textContent = txnDescription(tx);
+                    const btns = document.createElement('span');
+                    btns.className = 'actions-btns';
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.type = 'button';
+                    toggleBtn.className = 'actions-btn';
+                    toggleBtn.textContent = tx.disabled ? 'Enable' : 'Disable';
+                    toggleBtn.addEventListener('click', () => setTxnDisabled(idx, !tx.disabled));
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.className = 'actions-btn danger';
+                    delBtn.textContent = '✕';
+                    delBtn.title = 'Delete this decision permanently';
+                    delBtn.addEventListener('click', () => deleteTxn(idx));
+                    btns.append(toggleBtn, delBtn);
+                    li.append(desc, btns);
+                    ul.appendChild(li);
+                });
+                root.appendChild(ul);
+            }
+
+            /** Shared tail for a txn-log edit from the Actions tab. */
+            function afterTxnEdit() {
+                redoStack = [];
+                replayTxns();
+                if (currentIndex >= images.length) {
+                    currentIndex = Math.max(images.length - 1, 0);
+                }
+                updateUndoButtons();
+                updateDock();
+                renderFolders();
+                scheduleSave();
+                if (resultsEl) {
+                    // Membership may have changed -> rebuild groups + tabs.
+                    rebuildResultGroups();
+                    renderResultsTabs();
+                    renderResultsBody();
+                }
+            }
+
+            function setTxnDisabled(index, disabled) {
+                const tx = txns[index];
+                if (!tx) return;
+                if (disabled) tx.disabled = true;
+                else delete tx.disabled;
+                afterTxnEdit();
+            }
+
+            function deleteTxn(index) {
+                if (index < 0 || index >= txns.length) return;
+                txns.splice(index, 1);
+                afterTxnEdit();
+            }
+
+            /** Recompute group membership + reset every ref to checked. */
+            function rebuildResultGroups() {
                 /** @type {Object.<string, string[]>} */
                 const grouped = {};
                 folders.forEach(folder => {
                     grouped[folder] = [];
                 });
-
                 discoveredByPath = {};
-                checkedRefs = new Set();
+                const nextChecked = new Set();
                 images.forEach((image, index) => {
-                    const cats = [...catSet(index)];
                     discoveredByPath[image] = discovered[index] || 'uncategorized';
-                    cats.forEach(cat => {
+                    [...catSet(index)].forEach(cat => {
                         if (!grouped[cat]) grouped[cat] = [];
                         grouped[cat].push(image);
-                        checkedRefs.add(refKey(cat, image));
+                        // Preserve an explicit untick if the ref still exists.
+                        if (!checkedRefs.size || checkedRefs.has(refKey(cat, image))) {
+                            nextChecked.add(refKey(cat, image));
+                        }
                     });
                 });
-
                 groupedFiles = grouped;
-                collapsedFolders = new Set();
+                checkedRefs = nextChecked;
+            }
 
-                renderChecklist();
+            /** Open (or rebuild) the results popup from current sort state. */
+            function openResults() {
+                const reopening = !!resultsEl;
+                if (resultsEl) closeResults();
+                closePopup();
 
-                document.getElementById('sorter').style.display = 'none';
-                document.getElementById('results').style.display = 'block';
+                storeName = genStoreName();
+                scriptVariant = defaultVariant();
+                checkedRefs = new Set(); // rebuildResultGroups checks everything
+                rebuildResultGroups();
+                if (!reopening) resultsTab = 'script';
 
-                document.getElementById('tabPosix').onclick = () => selectVariant('posix');
-                document.getElementById('tabMacos').onclick = () => selectVariant('macos');
-                document.getElementById('tabWindows').onclick = () => selectVariant('windows');
+                const prevFocus = document.activeElement;
+                const overlay = document.createElement('div');
+                overlay.className = 'results-modal-overlay';
+                const modal = document.createElement('div');
+                modal.className = 'results-modal';
+                overlay.appendChild(modal);
 
-                selectVariant(
-                    isWindowsPlatform() ? 'windows' : isMacPlatform() ? 'macos' : 'posix'
-                );
+                const head = document.createElement('div');
+                head.className = 'results-modal-head';
+                const title = document.createElement('span');
+                title.className = 'results-modal-title';
+                title.textContent = 'Results';
+                const sub = document.createElement('span');
+                sub.className = 'results-modal-sub';
+                sub.textContent = `store ${storeName}`;
+                const closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'results-modal-close';
+                closeBtn.textContent = 'Close';
+                closeBtn.title = 'Close (Esc)';
+                closeBtn.addEventListener('click', closeResults);
+                head.append(title, sub, closeBtn);
+
+                const tabs = document.createElement('div');
+                tabs.className = 'results-tabs';
+                tabs.id = 'resultsTabs';
+                const body = document.createElement('div');
+                body.className = 'results-body';
+                body.id = 'resultsBody';
+                modal.append(head, tabs, body);
+
+                const onKey = e => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        closeResults();
+                    } else if (e.key === 'Tab') {
+                        const f = modal.querySelectorAll(
+                            'input, button, select, [tabindex]:not([tabindex="-1"])'
+                        );
+                        if (!f.length) return;
+                        const first = f[0];
+                        const last = f[f.length - 1];
+                        if (e.shiftKey && document.activeElement === first) {
+                            e.preventDefault();
+                            /** @type {HTMLElement} */ (last).focus();
+                        } else if (!e.shiftKey && document.activeElement === last) {
+                            e.preventDefault();
+                            /** @type {HTMLElement} */ (first).focus();
+                        }
+                    }
+                };
+                overlay.addEventListener('mousedown', e => {
+                    if (e.target === overlay) closeResults();
+                });
+                document.addEventListener('keydown', onKey, true);
+                resultsCleanup = () => {
+                    document.removeEventListener('keydown', onKey, true);
+                    if (prevFocus instanceof HTMLElement) prevFocus.focus();
+                };
+
+                document.body.appendChild(overlay);
+                resultsEl = overlay;
+                renderResultsTabs();
+                renderResultsBody();
+                closeBtn.focus();
+            }
+
+            function closeResults() {
+                if (!resultsEl) return;
+                if (resultsCleanup) resultsCleanup();
+                resultsCleanup = null;
+                resultsEl.remove();
+                resultsEl = null;
+                maybeRefocusOmnibar();
             }
 
             /**
@@ -2527,6 +2918,10 @@
                     ['1-9 / a-z', 'toggle that category on the current image (a-z = 10th+)'],
                     ['Space / → / ↓', 'next image'],
                     ['← / ↑', 'previous image'],
+                    [
+                        'Enter',
+                        'open the results popup (script + checklist); also the ☑ dock button',
+                    ],
                     ['/', 'focus the omnibar (Esc releases it)'],
                     ['↑/↓, Enter', 'in the omnibar: move / pick a match'],
                     [`${mod}+1-9`, 'in the omnibar: jump to that row'],
@@ -2691,7 +3086,9 @@
             }
 
             function maybeRenderScript() {
-                if (document.getElementById('results').style.display !== 'none') renderScript();
+                if (!resultsEl) return;
+                renderResultsTabs();
+                renderResultsBody();
             }
 
             // --- Options menu -----------------------------------------------
@@ -3003,6 +3400,40 @@
             document.getElementById('redoBtn').addEventListener('click', redoTxn);
             document.getElementById('helpBtn').addEventListener('click', openKeyboardPopup);
             document.getElementById('optionsBtn').addEventListener('click', openOptionsPopup);
+            document.getElementById('resultsBtn').addEventListener('click', openResults);
+
+            // Flush the session immediately on exit so a browse-only visit still
+            // records position (navigation no longer schedules its own save).
+            function flushSessionNow() {
+                if (!scriptOptions.sessionEnabled || !prefs.autosave || suspendSave) return;
+                const payload = sessionPayload();
+                try {
+                    if (persistMode === 'local') {
+                        writeLocalSession(payload);
+                        return;
+                    }
+                    const bytes = JSON.stringify(payload);
+                    if (navigator.sendBeacon) {
+                        navigator.sendBeacon(
+                            '/session',
+                            new Blob([bytes], { type: 'application/json' })
+                        );
+                    } else {
+                        fetch('/session', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: bytes,
+                            keepalive: true,
+                        });
+                    }
+                } catch {
+                    /* best effort */
+                }
+            }
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') flushSessionNow();
+            });
+            window.addEventListener('pagehide', flushSessionNow);
 
             document.getElementById('omnibarMode').addEventListener('click', () => {
                 setPref('focusMode', focusMode === 'omnibar' ? 'hotkeys' : 'omnibar');
@@ -3082,7 +3513,7 @@
 
             document.addEventListener('keydown', e => {
                 if (openPopupEl) return; // popup owns the keyboard while open
-                if (document.getElementById('results').style.display !== 'none') return;
+                if (resultsEl) return; // the results popup owns the keyboard too
 
                 const platformMod = isMacPlatform() ? e.metaKey : e.ctrlKey;
                 const otherMod = isMacPlatform() ? e.ctrlKey : e.metaKey;
@@ -3108,6 +3539,13 @@
 
                 // The omnibar input handles its own keys; don't double-act on them.
                 if (inOmnibar) return;
+
+                // Enter (outside the omnibar) opens the results popup.
+                if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    openResults();
+                    return;
+                }
 
                 // "+" (Shift+=) — the reliable new-category key (nothing claims it).
                 if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '+') {

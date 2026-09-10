@@ -4,6 +4,28 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
 
 ## Now / in progress
 
+- Results-as-popup rework: the end-of-run screen is now an in-app modal
+  (`openResults`, `.results-modal` — scrim / Esc / focus-trap like `openPopup`,
+  no more `#sorter`/`#results` display swap) openable any time via the **☑**
+  dock button, **Enter** (outside the omnibar), or advancing past the last
+  image. Tabs: **Script** (default) + one per non-empty category + **Actions**.
+  _(landed)_
+    - The Script tab _is_ the checklist rendered as a script: `lowerPosix` /
+      `lowerWindows` now return `{ text, lines }`; a `Line.ref` (`{category,path}`)
+      on the `ln -nfs` / `.lnk` lines drives a gutter checkbox bound to the same
+      `checkedRefs` key as the group-tab rows. Unchecked → dim + `# `-commented
+      display row; Copy / Download rebuild a clean script from the ticked lines
+      only (`buildOps` gained `state.keepUncheckedRefs` for the display lowering
+      and a `path` on each `reference` op). `buildOps` 3 call sites → one `lower()`
+      helper; all `lib` script tests updated + `ref`/reconstruct tests added.
+    - Actions tab: `txns[]` viewer with Disable (sets `tx.disabled`, round-trips
+      in the session file, `replay()` skips it — test added) / Delete (splice).
+    - `storeName` regenerated once per popup open.
+    - Autosave no longer fires on plain navigation (`showImage` lost its
+      `scheduleSave()`); cursor position rides the next real mutation, plus an
+      immediate `flushSessionNow()` on `visibilitychange`/`pagehide` via
+      `navigator.sendBeacon('/session')` (no new browser-storage path).
+
 - Single-store + navigational-reference model: multi-category assignment
   (`assignments[i]` is a Set), `--out`, `--no-single-store-unchanged`,
   `--follow-symlinks`, `--single-key-advance`, and the third (Windows /
@@ -71,6 +93,19 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
 
 ## Next
 
+- **Apply button in the results popup** — a server endpoint that executes the
+  generated ops (intern + reference) directly instead of handing the user a
+  script to run; needs a dry-run/confirm and to reconcile with the
+  not-yet-built rescan + project-keyed store. Deliberately deferred — the popup
+  stays Copy / Download for now.
+- **Content-addressed single store (sha256)** — the store's identity should
+  ultimately be `sha256(file bytes)`, not basename+`hash8(path)`: identical
+  content dedupes to one store entry with N references regardless of
+  name/origin. The **server** computes the digest (lazily / streamed — hashing
+  a large scan up front is slow); store filename becomes `<sha256>` (or
+  `<sha256[:16]>-<basename>` for browsability) with the real extension. Pairs
+  with the project-keyed-store and store-consolidation items. Confirmed
+  direction.
 - **Live rescan** — the disk scan only runs at server startup. Add a `/rescan`
   endpoint that re-runs the scan (updating `imageFiles` / `imageCategories` /
   `imageSetHash`) and, client-side, an Options-menu **Rescan now** button plus
@@ -105,6 +140,32 @@ Backlog, roughly in priority order. Move items to a commit / PR as they land.
 
 ## Later
 
+- **Package as a desktop app (Tauri, or Electron).** This is effectively a
+  proto-Tauri app already — a webview frontend over a local Node backend, with
+  file-local state, no auth, gesture nav, and in-app popups instead of browser
+  dialogs. Natural endpoint: `index.html` stays the frontend, `server.js`'s
+  logic becomes the backend command layer, state moves to a real app-data dir,
+  and the single-local-user / multi-hosting caveat disappears. `lib/*.js` is
+  already the portable, dependency-free core.
+- Retire the `localStorage` session fallback — the decision log must stay
+  file-local. On a `POST /session` failure, surface it and offer a file path /
+  download rather than silently stashing in the browser. Also `Cache-Control:
+no-store` on `/image/` so photo bytes don't linger in the browser cache.
+  (Privacy: only benign UI prefs belong in `localStorage`.)
+- **Diagnostics / Inspector tab** in the results popup — per image: discovered
+  category + origin realpath, the computed store path (once sha256 lands), and
+  label-count cache state. "As necessary" — a debugging aid, not core.
+- Is the cursor (`currentIndex` / `frontier`) part of the action stack or just
+  view state? Currently `meta`, not `txns` — leaning keep it that way
+  (navigation isn't a decision; putting it in `txns` would make undo/redo step
+  through cursor moves). Open.
+- Session file location — writing `.imgsort-session.json` into the working /
+  photo dir is a smell; `TMPDIR` is too fragile. Leading candidate: an OS state
+  dir keyed by project identity (`~/Library/Application Support/imgsort/` on
+  macOS, `$XDG_STATE_HOME` / `~/.local/state/imgsort/` on Linux), `<projkey>` =
+  hash of realpath(input) + realpath(`--out`) — same key as the project-keyed
+  store. Working-dir file stays as fallback / `--session-file <path>` override.
+  Ultimately a real embedded store (SQLite) more than loose JSON. Open.
 - Open question — should nested categories sharing a path prefix be mutually
   exclusive within that subtree (e.g. picking `uncategorized/foo` clears sibling
   `uncategorized/*`)? Currently they're independent; the reserved bare
