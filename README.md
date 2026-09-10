@@ -9,7 +9,7 @@ generating a shell script that moves (or deletes) them.
 - Assign each image to a named folder with a single digit key
 - Create new folders on the fly
 - Navigate back to change previous decisions
-- Generates a POSIX `sh` script you can copy or download
+- Generates a shell script (POSIX `sh` or macOS `zsh`) you can copy or download
 
 ## Installation
 
@@ -81,12 +81,13 @@ The results screen shows the generated script in a two-tab view with **Copy** an
 The macOS tab is auto-selected on macOS browsers; you can switch manually. In both
 variants the script:
 
-- starts with `#!/bin/sh`, `set -e`, and `cd` into the directory the server was
-  started from (`process.cwd()`, exposed via the `/config` endpoint)
+- starts with a shebang (`#!/bin/sh` or `#!/bin/zsh`), `set -e`, and `cd` into the
+  directory the server was started from (`process.cwd()`, exposed via the
+  `/config` endpoint)
 - runs `mkdir -p <folder>` once per user folder, then `mv -i <file> <folder>/` for
   each file
-- uses `rm -i <file>` for the `trash` folder, preceded by a
-  `# review carefully` comment
+- deletes the `trash` folder's files (`rm -i` on POSIX, the `trash` CLI on macOS),
+  preceded by a `# review carefully` comment
 - leaves `uncategorized` files untouched, emitting a comment with the count
 
 Every path is single-quote shell-escaped. The script is also printed to the
@@ -97,3 +98,15 @@ browser console.
 - All assignments are stored in memory (not saved to disk)
 - Nothing is moved or deleted until you run the generated script yourself
 - Press Ctrl+C in the terminal to stop the server
+
+## Development
+
+```bash
+npm run lint        # eslint (**/*.js)
+npm run typecheck   # tsc --noEmit, checkJS (*.js)
+npm run format      # prettier --write .  (the only automated check for index.html)
+```
+
+All three should pass before committing. `index.html` is a single self-contained
+file with inline CSS/JS — keep it that way; no build step, no new dependencies
+without discussion. See `CLAUDE.md` for repo conventions.
