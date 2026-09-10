@@ -22,3 +22,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# imgsort runtime output (generated in the directory the server runs in)
+.imgsort-session.json
+.imgsort-store-*/

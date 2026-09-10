@@ -222,7 +222,8 @@
                 z-index: 5;
                 display: flex;
                 align-items: center;
-                gap: 22px;
+                flex-wrap: wrap;
+                gap: 10px 14px;
                 padding: 10px 18px;
                 background: var(--dock-bg);
                 border: 1px solid var(--border-soft);
@@ -273,11 +274,207 @@
                 color: var(--text-dim);
             }
 
+            .dock-chip {
+                flex: none;
+                font-size: 13px;
+                line-height: 1;
+                opacity: 0.75;
+                cursor: default;
+            }
+
+            .dock-btn {
+                flex: none;
+                background: var(--hud-bg);
+                color: var(--text-badge);
+                border: 1px solid var(--border);
+                border-radius: var(--r-sm);
+                padding: 3px 9px;
+                font-size: 14px;
+                line-height: 1;
+                cursor: pointer;
+                transition:
+                    color 0.2s,
+                    border-color 0.2s,
+                    opacity 0.2s;
+            }
+
+            .dock-btn:hover:not(:disabled) {
+                color: var(--text);
+                border-color: var(--border-strong);
+            }
+
+            .dock-btn:disabled {
+                opacity: 0.35;
+                cursor: default;
+            }
+
+            .session-banner {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 10px 16px;
+                border-radius: var(--r);
+                background: var(--bg-1);
+                border: 1px solid var(--border);
+                font-size: 13px;
+                color: var(--text-dim);
+            }
+
+            .session-banner.warn {
+                border-color: var(--warn);
+            }
+
+            .session-banner button {
+                background: var(--bg-plain);
+                color: var(--text);
+                border: none;
+                border-radius: var(--r-sm);
+                padding: 5px 12px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+
+            .session-banner button:hover {
+                background: var(--bg-plain-hover);
+            }
+
+            .session-banner .banner-dismiss {
+                margin-left: auto;
+                background: transparent;
+                color: var(--text-muted);
+                padding: 4px 8px;
+            }
+
+            .session-row {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 14px;
+                margin-top: 10px;
+                font-size: 12px;
+            }
+
+            .save-indicator {
+                color: var(--text-faint);
+            }
+
+            .save-indicator.saved {
+                color: var(--accent);
+            }
+
+            .link-btn {
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                font-size: 12px;
+                text-decoration: underline;
+                cursor: pointer;
+            }
+
+            .link-btn:hover {
+                color: var(--danger);
+            }
+
             .controls {
-                padding: 24px 20px;
+                padding: 20px 20px 24px;
                 background: var(--bg-1);
                 border-radius: var(--r);
                 box-shadow: var(--shadow-panel-up);
+            }
+
+            .omnibar {
+                position: relative;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                max-width: 620px;
+                margin: 0 auto 18px;
+                padding: 8px 10px 8px 12px;
+                background: var(--bg-0);
+                border: 1px solid var(--border);
+                border-radius: var(--r);
+            }
+
+            .omnibar:focus-within {
+                border-color: var(--accent);
+            }
+
+            .omnibar-icon {
+                flex: none;
+                font-size: 13px;
+                opacity: 0.7;
+            }
+
+            .omnibar-input {
+                flex: 1;
+                min-width: 0;
+                background: transparent;
+                border: none;
+                outline: none;
+                color: var(--text);
+                font-size: 15px;
+                font-family: inherit;
+            }
+
+            .omnibar-input::placeholder {
+                color: var(--text-faint);
+            }
+
+            .omnibar-mode {
+                cursor: pointer;
+            }
+
+            .omnibar-results {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: calc(100% + 6px);
+                z-index: 20;
+                background: var(--bg-1);
+                border: 1px solid var(--border);
+                border-radius: var(--r);
+                box-shadow: var(--shadow-dock);
+                overflow: hidden;
+            }
+
+            .omnibar-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 9px 14px;
+                font-size: 14px;
+                color: var(--text-dim);
+                cursor: pointer;
+            }
+
+            .omnibar-row + .omnibar-row {
+                border-top: 1px solid var(--border-soft);
+            }
+
+            .omnibar-row.active {
+                background: var(--bg-2);
+                color: var(--text);
+            }
+
+            .omnibar-row .key {
+                margin-left: auto;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 22px;
+                height: 22px;
+                padding: 0 4px;
+                border-radius: var(--r-sm);
+                background: var(--bg-badge);
+                color: var(--text-badge);
+                font-size: 13px;
+                font-weight: 700;
+            }
+
+            .omnibar-row .omnibar-create {
+                color: var(--accent);
+                font-weight: 600;
             }
 
             .navigation {
@@ -616,10 +813,32 @@
         </div>
 
         <div id="sorter" style="display: flex; flex-direction: column; height: 100vh">
+            <div class="session-banner" id="sessionBanner" hidden></div>
+            <div class="session-banner warn" id="localWarning" hidden></div>
+
             <div class="image-tile">
                 <div class="dock">
                     <div class="dock-filename" id="filename" title="">Loading...</div>
                     <div class="dock-progress" id="progress">0 / 0</div>
+                    <button
+                        class="dock-btn"
+                        id="undoBtn"
+                        type="button"
+                        title="Undo last decision (⌘Z / Ctrl+Z)"
+                        disabled
+                    >
+                        ↶
+                    </button>
+                    <button
+                        class="dock-btn"
+                        id="redoBtn"
+                        type="button"
+                        title="Redo (⌘⇧Z / Ctrl+Y)"
+                        disabled
+                    >
+                        ↷
+                    </button>
+                    <span class="dock-chip" id="focusChip" title="">🔍</span>
                     <button
                         class="hud"
                         id="advanceHud"
@@ -633,6 +852,28 @@
             </div>
 
             <div class="controls">
+                <div class="omnibar">
+                    <span class="omnibar-icon" aria-hidden="true">🔍</span>
+                    <input
+                        type="text"
+                        id="omnibar"
+                        class="omnibar-input"
+                        placeholder="Find or create a category…"
+                        autocomplete="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                    />
+                    <button
+                        class="hud omnibar-mode"
+                        id="omnibarMode"
+                        type="button"
+                        title="Focus mode. Search: the box grabs focus on every image; type to filter, Esc to release. Hotkeys: bare 1-9 / a-z assign categories; press / to reach the box. Click to switch."
+                    >
+                        🔍 Search
+                    </button>
+                    <div class="omnibar-results" id="omnibarResults" hidden></div>
+                </div>
+
                 <div class="navigation">
                     <button class="btn btn-nav" id="prevBtn">&larr; Previous</button>
                     <button class="btn btn-nav" id="nextBtn">Next &rarr;</button>
@@ -644,6 +885,12 @@
 
                 <div class="status" id="status">Categories: uncategorized</div>
                 <div class="help-text" id="helpText"></div>
+                <div class="session-row" id="sessionRow" hidden>
+                    <span class="save-indicator" id="saveIndicator"></span>
+                    <button class="link-btn" id="clearSessionBtn" type="button">
+                        Clear session
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -682,7 +929,18 @@
             </div>
         </div>
 
-        <script>
+        <script type="module">
+            import { fuzzyScore } from '/lib/fuzzy.js';
+            import {
+                MAX_FOLDERS,
+                applyToggle,
+                newCategoryError,
+                isValidNewCategory,
+                folderKeyBadge,
+            } from '/lib/categories.js';
+            import { replay } from '/lib/txns.js';
+            import { buildOps, lowerPosix, lowerWindows, refKey } from '/lib/script.js';
+
             /** @type {string[]} */
             let images = [];
             let currentIndex = 0;
@@ -692,10 +950,9 @@
             /** @type {null | 'auto' | 'manual'} */
             let pinnedMode = null;
 
-            // Folders in key order: 1..9 by digit, 10th+ by letter a, b, c, …
-            // 1 = uncategorized, 2 = trash, then discovered/user folders.
-            const RESERVED = ['uncategorized', 'trash'];
-            const MAX_FOLDERS = 35; // 9 digits + 26 letters
+            // Categories in key order: 1..9 by digit, 10th+ by letter a, b, c, …
+            // 1 = uncategorized, 2 = trash, then discovered/user categories.
+            // MAX_FOLDERS / the category helpers come from lib/categories.js.
             /** @type {string[]} */
             let folders = ['uncategorized', 'trash'];
 
@@ -710,7 +967,35 @@
                 out: '.',
                 noSingleStoreUnchanged: false,
                 singleKeyAdvance: false,
+                focusMode: 'omnibar',
+                sessionEnabled: true,
+                imageSetHash: '',
             };
+            /** @type {'omnibar' | 'hotkeys'} */
+            let focusMode = 'omnibar';
+            // Ranked omnibar matches currently shown: { name, index } (index = -1 = "create").
+            /** @type {{ name: string, index: number }[]} */
+            let omniMatches = [];
+            let omniHighlight = 0;
+
+            // --- Session / transaction log ------------------------------------
+            // Source of truth for the sort: replayTxns() folds these onto the
+            // discovered base to rebuild `folders` and `assignments`.
+            /**
+             * @typedef {{ t: 'toggle', image: string, category: string }
+             *   | { t: 'set', image: string, categories: string[] }
+             *   | { t: 'create', name: string, image: string }} Txn
+             */
+            /** @type {Txn[]} */
+            let txns = [];
+            /** @type {Txn[]} */
+            let redoStack = [];
+            let suspendSave = false;
+            let saveTimer = null;
+            /** 'server' until a POST fails, then 'local' (localStorage fallback). */
+            let persistMode = 'server';
+            let localWarningDismissed = false;
+            const LS_KEY = 'imgsort-session';
 
             /**
              * The category set for an image, normalized so it is never empty
@@ -753,27 +1038,343 @@
                 hud.textContent =
                     `Advance: ${mode === 'auto' ? 'Auto' : 'Manual'}` + (pinned ? ' 🔒' : '');
                 hud.classList.toggle('pinned', pinned);
+
+                updateUndoButtons();
             }
 
             /**
-             * Toggle a category for an image. `trash` is exclusive: adding it
-             * clears everything else; adding any real category removes `trash`.
+             * Toggle a category on image `i` (delegates the set logic to
+             * lib/categories.js `applyToggle`).
              * @param {number} i
              * @param {string} name
              */
             function toggleCategory(i, name) {
-                const s = catSet(i);
-                if (s.has(name)) {
-                    s.delete(name);
-                    if (s.size === 0) assignments[i] = new Set(['uncategorized']);
+                assignments[i] = applyToggle(catSet(i), name);
+            }
+
+            /** @param {string} image */
+            function imageIndexOf(image) {
+                return images.indexOf(image);
+            }
+
+            /** Discovered base as a { imagePath: category } map for lib/txns.js. */
+            function discoveredByPathMap() {
+                /** @type {Record<string, string>} */
+                const m = {};
+                images.forEach((img, i) => {
+                    m[img] = discovered[i] || 'uncategorized';
+                });
+                return m;
+            }
+
+            /**
+             * Rebuild `folders` and index-keyed `assignments` from the discovered
+             * base + the transaction log via lib/txns.js `replay`. Does not touch
+             * currentIndex / the visible image.
+             */
+            function replayTxns() {
+                const result = replay({ images, discovered: discoveredByPathMap() }, txns);
+                folders = result.folders;
+                assignments = {};
+                images.forEach((img, i) => {
+                    assignments[i] = result.assignments.get(img) || new Set(['uncategorized']);
+                });
+                renderFolders();
+            }
+
+            /**
+             * Append a transaction, drop the redo stack, and schedule a save.
+             * @param {Txn} tx
+             */
+            function pushTxn(tx) {
+                txns.push(tx);
+                redoStack = [];
+                scheduleSave();
+                updateUndoButtons();
+            }
+
+            /** Toggle a category on the current image and record it. No advance. */
+            function toggleAndRecord(name) {
+                toggleCategory(currentIndex, name);
+                pushTxn({ t: 'toggle', image: images[currentIndex], category: name });
+                updateStatus();
+                renderFolders();
+            }
+
+            function updateUndoButtons() {
+                const u = document.getElementById('undoBtn');
+                const r = document.getElementById('redoBtn');
+                if (u) u.disabled = txns.length === 0;
+                if (r) r.disabled = redoStack.length === 0;
+            }
+
+            function undo() {
+                if (txns.length === 0) return;
+                const tx = txns.pop();
+                redoStack.push(tx);
+                replayTxns();
+                const i = imageIndexOf(tx.image);
+                currentIndex = i >= 0 ? i : Math.min(currentIndex, images.length - 1);
+                showImage(currentIndex);
+                scheduleSave();
+                updateUndoButtons();
+            }
+
+            function redoTxn() {
+                if (redoStack.length === 0) return;
+                const tx = redoStack.pop();
+                txns.push(tx);
+                replayTxns();
+                const i = imageIndexOf(tx.image);
+                currentIndex = i >= 0 ? i : Math.min(currentIndex, images.length - 1);
+                showImage(currentIndex);
+                scheduleSave();
+                updateUndoButtons();
+            }
+
+            // ---- persistence --------------------------------------------------
+
+            function sessionPayload() {
+                return {
+                    imageSetHash: scriptOptions.imageSetHash,
+                    txns,
+                    meta: { currentIndex, frontier, pinnedMode },
+                };
+            }
+
+            /** @returns {*} */
+            function readLocalSession() {
+                try {
+                    return JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+                } catch {
+                    return null;
+                }
+            }
+
+            function writeLocalSession(payload) {
+                try {
+                    localStorage.setItem(LS_KEY, JSON.stringify(payload));
+                } catch {
+                    /* private mode / quota — nothing more we can do */
+                }
+            }
+
+            function clearLocalSession() {
+                try {
+                    localStorage.removeItem(LS_KEY);
+                } catch {
+                    /* ignore */
+                }
+            }
+
+            /**
+             * @param {'saving' | 'saved' | 'saved-local' | 'idle'} state
+             */
+            function setSaveIndicator(state) {
+                const el = document.getElementById('saveIndicator');
+                if (!el) return;
+                el.classList.toggle('saved', state === 'saved' || state === 'saved-local');
+                el.textContent =
+                    state === 'saving'
+                        ? 'saving…'
+                        : state === 'saved'
+                          ? 'saved ✓'
+                          : state === 'saved-local'
+                            ? 'saved in this browser ✓'
+                            : '';
+            }
+
+            function scheduleSave() {
+                if (!scriptOptions.sessionEnabled || suspendSave) return;
+                setSaveIndicator('saving');
+                clearTimeout(saveTimer);
+                saveTimer = setTimeout(doSave, 500);
+            }
+
+            async function doSave() {
+                const payload = sessionPayload();
+                if (persistMode === 'local') {
+                    writeLocalSession(payload);
+                    setSaveIndicator('saved-local');
                     return;
                 }
-                if (name === 'trash') {
-                    assignments[i] = new Set(['trash']);
+                try {
+                    const r = await fetch('/session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const res = await r.json();
+                    if (res && res.ok) {
+                        setSaveIndicator('saved');
+                        return;
+                    }
+                    throw new Error(res && res.error ? res.error : 'save failed');
+                } catch {
+                    persistMode = 'local';
+                    writeLocalSession(payload);
+                    showLocalWarning();
+                    setSaveIndicator('saved-local');
+                }
+            }
+
+            function showLocalWarning() {
+                if (localWarningDismissed) return;
+                const b = document.getElementById('localWarning');
+                b.innerHTML = '';
+                const msg = document.createElement('span');
+                msg.textContent = 'Session saved in this browser only.';
+                const clear = document.createElement('button');
+                clear.textContent = 'Clear';
+                clear.addEventListener('click', clearSession);
+                const dismiss = document.createElement('button');
+                dismiss.className = 'banner-dismiss';
+                dismiss.textContent = '×';
+                dismiss.title = 'Dismiss for this session';
+                dismiss.addEventListener('click', () => {
+                    localWarningDismissed = true;
+                    b.hidden = true;
+                });
+                b.append(msg, clear, dismiss);
+                b.hidden = false;
+            }
+
+            // ---- resume (roll-forward) -------------------------------------
+
+            /** @param {string} label @param {() => void} fn */
+            function bannerButton(label, fn) {
+                const btn = document.createElement('button');
+                btn.textContent = label;
+                btn.addEventListener('click', fn);
+                return btn;
+            }
+
+            function hideSessionBanner() {
+                document.getElementById('sessionBanner').hidden = true;
+            }
+
+            /**
+             * Roll the saved log forward onto the current run's base. Saved
+             * decisions win; txns for images no longer present are pruned.
+             * @param {*} session
+             */
+            function resumeSession(session) {
+                const saved = Array.isArray(session.txns) ? session.txns : [];
+                const applicable = saved.filter(tx => imageIndexOf(tx.image) >= 0);
+                const skipped = saved.length - applicable.length;
+
+                suspendSave = true;
+                txns = applicable;
+                redoStack = [];
+                replayTxns();
+
+                const meta = session.meta || {};
+                frontier = Number.isInteger(meta.frontier) ? meta.frontier : 0;
+                pinnedMode =
+                    meta.pinnedMode === 'auto' || meta.pinnedMode === 'manual'
+                        ? meta.pinnedMode
+                        : null;
+                const ci = Number.isInteger(meta.currentIndex) ? meta.currentIndex : 0;
+                frontier = Math.min(frontier, Math.max(images.length - 1, 0));
+                suspendSave = false;
+
+                updateUndoButtons();
+                showImage(Math.min(Math.max(ci, 0), Math.max(images.length - 1, 0)));
+
+                // Persist the pruned log as the new saved state right away.
+                doSave();
+
+                const differs = session.imageSetHash !== scriptOptions.imageSetHash;
+                let text = `Resumed ${applicable.length} saved decision${
+                    applicable.length === 1 ? '' : 's'
+                }`;
+                if (differs) text += ' from a different image set';
+                if (skipped > 0) {
+                    text += ` (${skipped} skipped: image${
+                        skipped === 1 ? '' : 's'
+                    } no longer present)`;
+                }
+
+                const b = document.getElementById('sessionBanner');
+                b.innerHTML = '';
+                const msg = document.createElement('span');
+                msg.textContent = text;
+                const dismiss = document.createElement('button');
+                dismiss.className = 'banner-dismiss';
+                dismiss.textContent = '×';
+                dismiss.title = 'Dismiss';
+                dismiss.addEventListener('click', hideSessionBanner);
+                b.append(
+                    msg,
+                    bannerButton('Discard & start fresh', () => {
+                        hideSessionBanner();
+                        discardSavedSession();
+                    }),
+                    dismiss
+                );
+                b.hidden = false;
+            }
+
+            async function discardSavedSession() {
+                try {
+                    await fetch('/session', { method: 'DELETE' });
+                } catch {
+                    /* ignore */
+                }
+                clearLocalSession();
+                txns = [];
+                redoStack = [];
+                replayTxns();
+                updateUndoButtons();
+                showImage(0);
+            }
+
+            async function clearSession() {
+                const n = txns.length;
+                if (
+                    !window.confirm(
+                        `Discard all ${n} sorting decision${n === 1 ? '' : 's'} and the saved session?`
+                    )
+                ) {
                     return;
                 }
-                s.delete('trash');
-                s.add(name);
+                document.getElementById('localWarning').hidden = true;
+                await discardSavedSession();
+                setSaveIndicator('idle');
+            }
+
+            async function initSession() {
+                const row = document.getElementById('sessionRow');
+                if (!scriptOptions.sessionEnabled) {
+                    row.hidden = true;
+                    return;
+                }
+                row.hidden = false;
+                setSaveIndicator('idle');
+
+                let remote = {};
+                try {
+                    remote = await (await fetch('/session')).json();
+                } catch {
+                    remote = {};
+                }
+                if (remote && remote.disabled) {
+                    scriptOptions.sessionEnabled = false;
+                    row.hidden = true;
+                    return;
+                }
+
+                let session = remote && remote.txns ? remote : null;
+                if (!session) {
+                    const ls = readLocalSession();
+                    if (ls && ls.txns) {
+                        session = ls;
+                        persistMode = 'local';
+                    }
+                }
+                if (!session || !Array.isArray(session.txns) || session.txns.length === 0) return;
+
+                resumeSession(session);
             }
 
             function isMacPlatform() {
@@ -798,37 +1399,20 @@
                 return DISPLAY_SEP === '/' ? p : p.split('/').join(DISPLAY_SEP);
             }
 
-            /**
-             * The key for the nth folder: '1'..'9' then 'a', 'b', …
-             * @param {number} i
-             * @returns {string}
-             */
-            function folderKey(i) {
-                return i < 9 ? String(i + 1) : String.fromCharCode(97 + (i - 9));
-            }
-
-            /**
-             * Badge text for the nth folder's key.
-             * @param {number} i
-             * @returns {string}
-             */
-            function folderKeyBadge(i) {
-                return folderKey(i).toUpperCase();
-            }
-
             function updateHelpText() {
                 const el = document.getElementById('helpText');
+                const mod = isMacPlatform() ? '⌘' : 'Ctrl';
                 el.textContent =
-                    'Press 1-9 (then a-z for categories 10-35) to toggle that category — an ' +
-                    'image can be in several. Space / Down = next, Up = previous. ' +
-                    (isMacPlatform() ? '⌘N' : 'Ctrl+N') +
-                    ' (or "New folder") makes a new category and applies it to the current image. ' +
-                    'The Advance pill (top-right) ' +
-                    'shows whether a category key also advances: it follows your position ' +
-                    (scriptOptions.singleKeyAdvance
-                        ? '(Auto at the frontier, Manual when you go back to edit)'
-                        : '(Manual by default; started with --single-key-advance for Auto)') +
-                    ' — click it to pin.';
+                    'Type in the omnibar to fuzzy-find a category (↑/↓ + Enter, or ' +
+                    mod +
+                    '+1-9 to jump to a row); if it is a new name, pick Create. ' +
+                    'Bare 1-9 / a-z toggle a category directly (10-35 use a-z) — an image ' +
+                    'can be in several. In Search mode the omnibar holds focus, so press ' +
+                    'Esc to release it for those keys; in Hotkeys mode press / to reach ' +
+                    'the omnibar. Space / Down = next, Up = previous. ' +
+                    mod +
+                    '+N makes a new category. The Advance pill shows whether a category ' +
+                    'key also advances (it follows your position; click to pin).';
             }
 
             async function loadImages() {
@@ -838,21 +1422,31 @@
                 const categories = data.categories || {};
                 if (data.options) scriptOptions = data.options;
 
+                // Only the discovered base is recorded here; replayTxns() builds
+                // `folders` and `assignments` from it (+ the transaction log).
                 images.forEach((image, index) => {
-                    const category = categories[image] || 'uncategorized';
-                    discovered[index] = category;
-                    assignments[index] = new Set([category]);
-                    if (category !== 'uncategorized' && !folders.includes(category)) {
-                        folders.push(category);
-                    }
+                    discovered[index] = categories[image] || 'uncategorized';
                 });
 
+                suspendSave = true;
+                txns = [];
+                redoStack = [];
+                replayTxns();
+
+                focusMode = scriptOptions.focusMode === 'hotkeys' ? 'hotkeys' : 'omnibar';
                 updateHelpText();
-                renderFolders();
+                updateFocusModeUI();
+                updateUndoButtons();
+                renderOmnibar();
 
                 if (images.length > 0) {
                     showImage(0);
+                } else {
+                    maybeRefocusOmnibar();
                 }
+
+                await initSession();
+                suspendSave = false;
             }
 
             function showImage(index) {
@@ -868,6 +1462,8 @@
                 updateStatus();
                 updateButtons();
                 renderFolders();
+                maybeRefocusOmnibar();
+                scheduleSave();
             }
 
             function updateStatus() {
@@ -901,14 +1497,12 @@
 
                     const key = document.createElement('span');
                     key.className = 'key';
-                    key.textContent = folderKeyBadge(i);
+                    key.textContent = folderKeyBadge(i, isMacPlatform());
                     button.appendChild(key);
                     button.appendChild(document.createTextNode(toDisplay(name)));
 
                     button.addEventListener('click', () => {
-                        toggleCategory(currentIndex, name);
-                        updateStatus();
-                        renderFolders();
+                        toggleAndRecord(name);
                     });
                     container.appendChild(button);
                 });
@@ -926,40 +1520,32 @@
                 document.getElementById('folderError').textContent = message || '';
             }
 
+            /**
+             * Add a new category and apply it to the current image (its whole
+             * reason for existing right now). No advance — you may be adding
+             * several. Returns whether it was created.
+             * @param {string} name
+             * @returns {boolean}
+             */
+            function commitNewCategory(name) {
+                const err = newCategoryError(name, folders);
+                if (err) {
+                    setFolderError(err);
+                    return false;
+                }
+                folders.push(name);
+                setFolderError('');
+                toggleCategory(currentIndex, name);
+                pushTxn({ t: 'create', name, image: images[currentIndex] });
+                updateStatus();
+                renderFolders();
+                return true;
+            }
+
             function createFolder() {
                 const raw = window.prompt('New folder name:');
                 if (raw === null) return;
-
-                const name = raw.trim();
-                if (name === '') {
-                    setFolderError('Folder name cannot be empty.');
-                    return;
-                }
-                if (name.includes('/') || name.includes('\\')) {
-                    setFolderError('Folder name cannot contain "/" or "\\".');
-                    return;
-                }
-                if (RESERVED.includes(name)) {
-                    setFolderError(`"${name}" is a reserved folder name.`);
-                    return;
-                }
-                if (folders.includes(name)) {
-                    setFolderError(`Folder "${name}" already exists.`);
-                    return;
-                }
-                if (folders.length >= MAX_FOLDERS) {
-                    setFolderError(`Maximum of ${MAX_FOLDERS} folders reached.`);
-                    return;
-                }
-
-                folders.push(name);
-                setFolderError('');
-                // A freshly created category applies to the current image (its
-                // whole reason for existing right now). No advance — you may be
-                // adding several, or want to review.
-                toggleCategory(currentIndex, name);
-                updateStatus();
-                renderFolders();
+                commitNewCategory(raw.trim());
             }
 
             /**
@@ -968,9 +1554,7 @@
              * @param {string} name
              */
             function pressCategory(name) {
-                toggleCategory(currentIndex, name);
-                updateStatus();
-                renderFolders();
+                toggleAndRecord(name);
                 if (effectiveAdvanceMode() === 'auto') navigate(1);
             }
 
@@ -988,52 +1572,123 @@
                 }
             }
 
-            /**
-             * POSIX shell single-quote a string.
-             * @param {string} value
-             * @returns {string}
-             */
-            function shquote(value) {
-                return `'${value.split("'").join(`'\\''`)}'`;
+            // ---- Category omnibar ------------------------------------------------
+            // fuzzyScore comes from lib/fuzzy.js.
+
+            function omniInput() {
+                return /** @type {HTMLInputElement} */ (document.getElementById('omnibar'));
             }
 
-            /**
-             * PowerShell single-quote a string literal ('' escapes a quote).
-             * @param {string} value
-             * @returns {string}
-             */
-            function psquote(value) {
-                return `'${String(value).split("'").join("''")}'`;
-            }
+            /** Recompute matches for the current query and redraw the dropdown. */
+            function renderOmnibar() {
+                const query = omniInput().value.trim();
+                const box = document.getElementById('omnibarResults');
 
-            /**
-             * Tiny synchronous FNV-1a string hash, returned as 8 hex digits.
-             * @param {string} str
-             * @returns {string}
-             */
-            function hash8(str) {
-                let h = 0x811c9dc5;
-                for (let i = 0; i < str.length; i++) {
-                    h ^= str.charCodeAt(i);
-                    h = Math.imul(h, 0x01000193);
+                if (query === '') {
+                    omniMatches = [];
+                    box.hidden = true;
+                    box.innerHTML = '';
+                    return;
                 }
-                return (h >>> 0).toString(16).padStart(8, '0');
+
+                const ranked = folders
+                    .map((name, index) => ({ name, index, score: fuzzyScore(query, name) }))
+                    .filter(m => m.score >= 0)
+                    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+                    .slice(0, 8)
+                    .map(m => ({ name: m.name, index: m.index }));
+
+                const exact = folders.some(f => f.toLowerCase() === query.toLowerCase());
+                if (!exact && isValidNewCategory(query, folders)) {
+                    ranked.push({ name: query, index: -1 });
+                }
+
+                omniMatches = ranked;
+                if (omniHighlight >= omniMatches.length) omniHighlight = 0;
+
+                if (omniMatches.length === 0) {
+                    box.hidden = true;
+                    box.innerHTML = '';
+                    return;
+                }
+
+                box.innerHTML = '';
+                omniMatches.forEach((m, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'omnibar-row' + (i === omniHighlight ? ' active' : '');
+
+                    const label = document.createElement('span');
+                    if (m.index === -1) {
+                        label.className = 'omnibar-create';
+                        label.textContent = `Create "${toDisplay(m.name)}"`;
+                    } else {
+                        label.textContent = toDisplay(m.name);
+                    }
+                    row.appendChild(label);
+
+                    if (m.index >= 0 && m.index < MAX_FOLDERS) {
+                        const badge = document.createElement('span');
+                        badge.className = 'key';
+                        badge.textContent = folderKeyBadge(m.index, isMacPlatform());
+                        row.appendChild(badge);
+                    }
+
+                    row.addEventListener('mousedown', e => {
+                        e.preventDefault(); // keep focus in the input
+                        pickOmni(i);
+                    });
+                    box.appendChild(row);
+                });
+                box.hidden = false;
             }
 
-            /** @param {string} p */
-            function baseName(p) {
-                const parts = p.split('/');
-                return parts[parts.length - 1];
+            /** Act on omnibar row `i`: toggle the category (or create it), then reset. */
+            function pickOmni(i) {
+                const m = omniMatches[i];
+                if (!m) return;
+                if (m.index === -1) {
+                    if (commitNewCategory(m.name)) {
+                        renderFolders();
+                    }
+                } else {
+                    pressCategory(m.name);
+                }
+                omniInput().value = '';
+                omniHighlight = 0;
+                renderOmnibar();
             }
 
-            /**
-             * @param {string} cat
-             * @param {string} p
-             * @returns {string}
-             */
-            function refKey(cat, p) {
-                return `${cat}\n${p}`;
+            function updateFocusModeUI() {
+                const pill = document.getElementById('omnibarMode');
+                pill.textContent = focusMode === 'omnibar' ? '🔍 Search' : '⌨ Hotkeys';
+                const chip = document.getElementById('focusChip');
+                chip.textContent = focusMode === 'omnibar' ? '🔍' : '⌨';
+                chip.title =
+                    focusMode === 'omnibar'
+                        ? 'Omnibar focus: the search box grabs focus on every image; type to filter, Esc to release for hotkeys.'
+                        : 'Hotkey focus: bare 1-9 / a-z keys assign categories; press / to jump to the search box.';
             }
+
+            function setFocusMode(mode) {
+                focusMode = mode;
+                updateFocusModeUI();
+                if (mode === 'omnibar') focusOmnibar();
+                else omniInput().blur();
+            }
+
+            function focusOmnibar() {
+                const el = omniInput();
+                el.focus();
+                el.select();
+            }
+
+            /** Called from showImage: in omnibar mode, re-grab focus each image. */
+            function maybeRefocusOmnibar() {
+                if (focusMode === 'omnibar') focusOmnibar();
+            }
+
+            // shquote / psquote / refkey / buildOps / lowerPosix / lowerWindows
+            // all come from lib/script.js.
 
             /**
              * Generate the per-run single-store directory name.
@@ -1061,180 +1716,8 @@
             let collapsedFolders = new Set();
             /** @type {Object.<string, string>} */
             let discoveredByPath = {};
-            /** @type {Object.<string, string[]>} */
-            let assignedCats = {};
             /** Baked into both script tabs so they agree on the store name. */
             let storeName = '';
-
-            /** @param {string} cat */
-            function catSegs(cat) {
-                return cat.split('/');
-            }
-
-            /**
-             * Build the abstract op list from the current checklist state.
-             * Ops: { op: 'mkdirp', path: string[] } (path relative to --out root),
-             *      { op: 'intern', src: string, name: string },
-             *      { op: 'reference', category: string, name: string, depth: number }.
-             * @returns {{ op: string, [k: string]: * }[]}
-             */
-            function buildOps() {
-                const unchangedSkip = scriptOptions.noSingleStoreUnchanged;
-
-                // Items moved into the store: checked in >= 1 category group.
-                /** @type {string[]} */
-                const interned = [];
-                const internedSet = new Set();
-                images.forEach(image => {
-                    const cats = assignedCats[image] || [];
-                    if (
-                        unchangedSkip &&
-                        cats.length === 1 &&
-                        cats[0] === (discoveredByPath[image] || 'uncategorized')
-                    ) {
-                        return; // left in place
-                    }
-                    const anyChecked = cats.some(cat => checkedRefs.has(refKey(cat, image)));
-                    if (anyChecked && !internedSet.has(image)) {
-                        internedSet.add(image);
-                        interned.push(image);
-                    }
-                });
-
-                if (interned.length === 0) return [];
-
-                // Flat store filenames; collisions get an <hash8>- prefix.
-                const used = new Set();
-                /** @type {Object.<string, string>} */
-                const storeNameFor = {};
-                interned.forEach(image => {
-                    let name = baseName(image);
-                    if (used.has(name)) name = `${hash8(image)}-${baseName(image)}`;
-                    used.add(name);
-                    storeNameFor[image] = name;
-                });
-
-                /** @type {{ op: string, [k: string]: * }[]} */
-                const ops = [{ op: 'mkdirp', path: [storeName] }];
-                interned.forEach(image => {
-                    ops.push({ op: 'intern', src: image, name: storeNameFor[image] });
-                });
-
-                folders.forEach(cat => {
-                    if (cat === 'trash') return; // trash: interned, never referenced
-                    const refs = interned.filter(
-                        image =>
-                            (assignedCats[image] || []).includes(cat) &&
-                            checkedRefs.has(refKey(cat, image))
-                    );
-                    if (refs.length === 0) return;
-                    ops.push({ op: 'mkdirp', path: catSegs(cat) });
-                    refs.forEach(image => {
-                        ops.push({
-                            op: 'reference',
-                            category: cat,
-                            name: storeNameFor[image],
-                            depth: catSegs(cat).length,
-                        });
-                    });
-                });
-
-                return ops;
-            }
-
-            /**
-             * @param {string[]} segs - path segments relative to the --out root
-             * @returns {string} POSIX path including the --out prefix
-             */
-            function outPosix(segs) {
-                const out = scriptOptions.out || '.';
-                return out === '.' ? segs.join('/') : [out, ...segs].join('/');
-            }
-
-            /**
-             * @param {string[]} segs
-             * @returns {string} backslash path including the --out prefix
-             */
-            function outWin(segs) {
-                const out = scriptOptions.out || '.';
-                return (out === '.' ? segs : [out, ...segs]).join('\\');
-            }
-
-            /**
-             * @param {{ op: string, [k: string]: * }[]} ops
-             * @param {string} shebang
-             * @returns {string}
-             */
-            function lowerPosix(ops, shebang) {
-                if (ops.length === 0) {
-                    return [shebang, 'set -e', '', '# nothing to do'].join('\n') + '\n';
-                }
-                const lines = [shebang, 'set -e', ''];
-                ops.forEach(o => {
-                    if (o.op === 'mkdirp') {
-                        lines.push(`mkdir -p ${shquote(outPosix(o.path))}`);
-                    } else if (o.op === 'intern') {
-                        const dst = outPosix([storeName, o.name]);
-                        lines.push(
-                            `echo ${shquote(
-                                `interning into single store: ./${o.src} -> ${outPosix([storeName])}/${o.name}`
-                            )}`
-                        );
-                        lines.push(`mv -i ${shquote(`./${o.src}`)} ${shquote(dst)}`);
-                    } else if (o.op === 'reference') {
-                        const link = outPosix(catSegs(o.category).concat([o.name]));
-                        const target = `${'../'.repeat(o.depth)}${storeName}/${o.name}`;
-                        lines.push(`ln -nfs ${shquote(target)} ${shquote(link)}`);
-                    }
-                });
-                return lines.join('\n').replace(/\n+$/, '\n');
-            }
-
-            /**
-             * @param {{ op: string, [k: string]: * }[]} ops
-             * @returns {string}
-             */
-            function lowerWindows(ops) {
-                const header = [
-                    "$ErrorActionPreference = 'Stop'",
-                    '$root = (Get-Location).Path',
-                    '',
-                ];
-                if (ops.length === 0) {
-                    return [header[0], '', '# nothing to do'].join('\n') + '\n';
-                }
-                const lines = header.slice();
-                ops.forEach(o => {
-                    if (o.op === 'mkdirp') {
-                        const p = outWin(o.path);
-                        lines.push(
-                            `New-Item -ItemType Directory -Force -Path ${psquote(p)} | Out-Null`
-                        );
-                        if (o.path.length === 1 && o.path[0] === storeName) {
-                            lines.push(`(Get-Item ${psquote(p)}).Attributes += 'Hidden'`);
-                        }
-                    } else if (o.op === 'intern') {
-                        const srcWin = `.\\${o.src.split('/').join('\\')}`;
-                        const dst = outWin([storeName, o.name]);
-                        lines.push(
-                            `Write-Host ${psquote(
-                                `interning into single store: ${srcWin} -> ${outWin([storeName])}\\${o.name}`
-                            )}`
-                        );
-                        lines.push(
-                            `Move-Item -LiteralPath ${psquote(srcWin)} -Destination ${psquote(dst)}`
-                        );
-                    } else if (o.op === 'reference') {
-                        const link = outWin(catSegs(o.category).concat([`${o.name}.lnk`]));
-                        const targetAbs = outWin([storeName, o.name]);
-                        lines.push('$ws = New-Object -ComObject WScript.Shell');
-                        lines.push(`$s = $ws.CreateShortcut((Join-Path $root ${psquote(link)}))`);
-                        lines.push(`$s.TargetPath = (Join-Path $root ${psquote(targetAbs)})`);
-                        lines.push('$s.Save()');
-                    }
-                });
-                return lines.join('\n').replace(/\n+$/, '\n');
-            }
 
             const VARIANTS = {
                 posix: { file: 'imgsort.sh', tab: 'tabPosix' },
@@ -1252,12 +1735,37 @@
                 renderScript();
             }
 
+            /** Assemble the pure ScriptState from the current module state. */
+            function scriptState() {
+                return {
+                    images,
+                    folders,
+                    assignments: new Map(images.map((img, i) => [img, catSet(i)])),
+                    discovered: discoveredByPath,
+                    checkedRefs,
+                    out: scriptOptions.out || '.',
+                    storeName,
+                    noSingleStoreUnchanged: !!scriptOptions.noSingleStoreUnchanged,
+                };
+            }
+
+            /** Category-group hint path, e.g. `sorted/trip/rome`. */
+            function outDisplayPath(cat) {
+                const out = scriptOptions.out || '.';
+                return out === '.' ? cat : `${out}/${cat}`;
+            }
+
             function renderScript() {
-                const ops = buildOps();
+                const out = scriptOptions.out || '.';
+                const ops = buildOps(scriptState());
                 const script =
                     scriptVariant === 'windows'
-                        ? lowerWindows(ops)
-                        : lowerPosix(ops, scriptVariant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh');
+                        ? lowerWindows(ops, { out, storeName })
+                        : lowerPosix(ops, {
+                              shebang: scriptVariant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh',
+                              out,
+                              storeName,
+                          });
 
                 document.getElementById('scriptBlock').textContent = script;
 
@@ -1305,7 +1813,7 @@
                     hint.textContent =
                         folder === 'trash'
                             ? '→ interned, no reference'
-                            : `→ ${toDisplay(outPosix(catSegs(folder)))}/`;
+                            : `→ ${toDisplay(outDisplayPath(folder))}/`;
 
                     header.appendChild(caret);
                     header.appendChild(master);
@@ -1387,11 +1895,9 @@
                 });
 
                 discoveredByPath = {};
-                assignedCats = {};
                 checkedRefs = new Set();
                 images.forEach((image, index) => {
                     const cats = [...catSet(index)];
-                    assignedCats[image] = cats;
                     discoveredByPath[image] = discovered[index] || 'uncategorized';
                     cats.forEach(cat => {
                         if (!grouped[cat]) grouped[cat] = [];
@@ -1471,6 +1977,66 @@
             document.getElementById('advanceHud').addEventListener('click', () => {
                 pinnedMode = pinnedMode === null ? 'auto' : pinnedMode === 'auto' ? 'manual' : null;
                 updateDock();
+                scheduleSave();
+            });
+
+            document.getElementById('undoBtn').addEventListener('click', undo);
+            document.getElementById('redoBtn').addEventListener('click', redoTxn);
+            document.getElementById('clearSessionBtn').addEventListener('click', clearSession);
+
+            document.getElementById('omnibarMode').addEventListener('click', () => {
+                setFocusMode(focusMode === 'omnibar' ? 'hotkeys' : 'omnibar');
+            });
+
+            omniInput().addEventListener('input', () => {
+                omniHighlight = 0;
+                renderOmnibar();
+            });
+
+            omniInput().addEventListener('keydown', e => {
+                const has = omniMatches.length > 0;
+                const jump = (isMacPlatform() ? e.metaKey : e.ctrlKey) && !e.altKey;
+                if (jump && /^[1-9]$/.test(e.key)) {
+                    e.preventDefault();
+                    pickOmni(Number(e.key) - 1);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (omniInput().value !== '') {
+                        omniInput().value = '';
+                        omniHighlight = 0;
+                        renderOmnibar();
+                    } else {
+                        omniInput().blur();
+                    }
+                    return;
+                }
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (has) {
+                        omniHighlight = (omniHighlight + 1) % omniMatches.length;
+                        renderOmnibar();
+                    } else {
+                        navigate(1);
+                    }
+                    return;
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (has) {
+                        omniHighlight =
+                            (omniHighlight - 1 + omniMatches.length) % omniMatches.length;
+                        renderOmnibar();
+                    } else {
+                        navigate(-1);
+                    }
+                    return;
+                }
+                if (e.key === 'Enter' && has) {
+                    e.preventDefault();
+                    pickOmni(omniHighlight);
+                }
             });
 
             document.addEventListener('keydown', e => {
@@ -1478,11 +2044,32 @@
 
                 const platformMod = isMacPlatform() ? e.metaKey : e.ctrlKey;
                 const otherMod = isMacPlatform() ? e.ctrlKey : e.metaKey;
+                const inOmnibar = document.activeElement === omniInput();
+                const k = e.key.toLowerCase();
 
-                // ⌘N / Ctrl+N — new category (mirrors the "+ New folder" button).
-                if (platformMod && !otherMod && !e.altKey && e.key.toLowerCase() === 'n') {
+                // Undo / redo — global editing actions, also from inside the omnibar
+                // (preventDefault so the browser's input undo doesn't also fire).
+                if (platformMod && !otherMod && !e.altKey && (k === 'z' || k === 'y')) {
+                    e.preventDefault();
+                    if (k === 'y' || (k === 'z' && e.shiftKey)) redoTxn();
+                    else undo();
+                    return;
+                }
+
+                // ⌘N / Ctrl+N — new category (works in both focus modes).
+                if (platformMod && !otherMod && !e.altKey && k === 'n') {
                     e.preventDefault();
                     createFolder();
+                    return;
+                }
+
+                // The omnibar input handles its own keys; don't double-act on them.
+                if (inOmnibar) return;
+
+                // "/" jumps focus to the omnibar (primary way in hotkeys mode).
+                if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '/') {
+                    e.preventDefault();
+                    focusOmnibar();
                     return;
                 }
 

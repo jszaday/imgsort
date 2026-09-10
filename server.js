@@ -3,9 +3,14 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
 import { glob } from 'glob';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname } from 'path';
+import { hash8 } from './lib/hash.js';
+import { IMAGE_EXTENSIONS, isImageFile, parseArgs, collectFromDir } from './lib/scan.js';
+
+const SESSION_FILE = '.imgsort-session.json';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,19 +22,17 @@ let imageFiles = []; // Paths relative to baseDir
 let imageCategories = {}; // Only entries whose category !== 'uncategorized'
 let baseDir = '';
 
-// Supported image extensions
-const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']);
-
 const USAGE =
-    'Usage: node server.js [-r|--recursive] [--out <dir>] ' +
-    '[--no-single-store-unchanged] [--follow-symlinks] [-h|--help] <directory|glob>';
+    'Usage: node server.js [-r|--recursive] [--out <dir>] [--follow-symlinks] ' +
+    '[--single-key-advance|--no-single-key-advance] [--no-single-store-unchanged] ' +
+    '[--omnibar-focus|--hotkey-focus] [--no-session] [-h|--help] <directory|glob>';
 
 function printUsage() {
     console.error(USAGE);
 }
 
 function printHelp() {
-    const exts = [...imageExtensions].map(e => e.slice(1)).join(',');
+    const exts = [...IMAGE_EXTENSIONS].map(e => e.slice(1)).join(',');
     console.log(
         [
             'imgsort — local browser-based image-triage tool',
@@ -57,6 +60,12 @@ function printHelp() {
             '                     flipping to Manual when you go back to edit an earlier',
             '                     image. The on-screen Advance pill shows the effective',
             '                     mode and can pin it either way.',
+            '  --omnibar-focus | --hotkey-focus',
+            '                     Sorter-screen focus. --omnibar-focus (default): the',
+            '                     category search box holds focus and grabs it on every',
+            '                     image; type to fuzzy-find, Esc to release for hotkeys.',
+            '                     --hotkey-focus: bare 1-9 / a-z keys drive it and "/"',
+            '                     jumps to the search box. Switchable live in the UI.',
             '  --no-single-store-unchanged',
             '                     Leave an item untouched (no intern, no reference) when',
             '                     its category set is unchanged from -r discovery. Default:',
@@ -64,6 +73,10 @@ function printHelp() {
             '  --follow-symlinks  Follow symlinked files and directories while scanning',
             '                     (default: symlinks are ignored entirely). A symlinked',
             '                     file is interned by its realpath; symlink loops guarded.',
+            '  --no-session       Disable the resumable session. By default every',
+            `                     decision is autosaved to ${SESSION_FILE} in the`,
+            '                     start directory (hidden dotfile) so you can resume,',
+            '                     undo and redo; --no-session turns that off entirely.',
             '  -h, --help         Show this help and exit.',
             '',
             'Examples:',
@@ -78,148 +91,35 @@ function printHelp() {
     );
 }
 
-// Parse command line arguments
-const argv = process.argv.slice(2);
-let recursive = false;
-let outDir = '.';
-let noSingleStoreUnchanged = false;
-let followSymlinks = false;
-let singleKeyAdvance = false;
-/** @type {string[]} */
-const positionals = [];
-for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === '-h' || arg === '--help') {
+// Parse command line arguments (no exit here — acted on under the main guard).
+const args = parseArgs(process.argv.slice(2));
+const {
+    recursive,
+    outDir,
+    noSingleStoreUnchanged,
+    followSymlinks,
+    singleKeyAdvance,
+    focusMode,
+    sessionEnabled,
+    positionals,
+} = args;
+let imageSetHash = '';
+
+const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
+
+if (isMain) {
+    if (args.help) {
         printHelp();
         process.exit(0);
-    } else if (arg === '-r' || arg === '--recursive') {
-        recursive = true;
-    } else if (arg === '--out') {
-        const value = argv[++i];
-        if (value === undefined) {
-            console.error('--out requires a directory argument');
-            printUsage();
-            process.exit(1);
-        }
-        outDir = value;
-    } else if (arg.startsWith('--out=')) {
-        outDir = arg.slice('--out='.length);
-    } else if (arg === '--no-single-store-unchanged') {
-        noSingleStoreUnchanged = true;
-    } else if (arg === '--follow-symlinks') {
-        followSymlinks = true;
-    } else if (arg === '--single-key-advance') {
-        singleKeyAdvance = true;
-    } else if (arg === '--no-single-key-advance') {
-        singleKeyAdvance = false;
-    } else if (arg.startsWith('-') && arg !== '-') {
-        console.error(`Unknown option: ${arg}`);
+    }
+    if (args.error) {
+        console.error(args.error);
         printUsage();
         process.exit(1);
-    } else {
-        positionals.push(arg);
     }
 }
 
-if (positionals.length !== 1) {
-    printUsage();
-    process.exit(1);
-}
-
 const inputArg = positionals[0];
-
-/**
- * @param {string} filename
- * @returns {boolean}
- */
-function isImageFile(filename) {
-    const ext = path.extname(filename).toLowerCase();
-    return imageExtensions.has(ext);
-}
-
-/**
- * Recursively (or not) collect image files under a directory.
- *
- * With followSymlinks=false (default) symlink entries are ignored entirely.
- * With followSymlinks=true a symlinked file is collected by its realpath and a
- * symlinked directory is descended (with -r), guarding against symlink loops.
- *
- * @param {string} root
- * @param {boolean} recurse
- * @param {boolean} follow
- * @param {string} baseReal - realpath of the directory served paths are relative to
- * @param {string} rootPosix - served-path prefix for files found under root (POSIX)
- * @returns {{ path: string, category: string }[]} served path + discovered category
- */
-function collectFromDir(root, recurse, follow, baseReal, rootPosix) {
-    /** @type {{ path: string, category: string }[]} */
-    const out = [];
-    /** @type {Set<string>} */
-    const visited = new Set([fs.realpathSync(root)]);
-
-    /** @param {string} rel */
-    const catOf = rel => {
-        const dir = path.posix.dirname(rel);
-        return dir === '.' ? '' : dir;
-    };
-    /** @param {string} rel */
-    const served = rel => (rootPosix ? `${rootPosix}/${rel}` : rel);
-
-    /**
-     * @param {string} abs
-     * @param {string} rel
-     */
-    const walk = (abs, rel) => {
-        const entries = fs.readdirSync(abs, { withFileTypes: true });
-        for (const entry of entries) {
-            const childAbs = path.join(abs, entry.name);
-            const childRel = rel === '' ? entry.name : `${rel}/${entry.name}`;
-            const isSymlink = entry.isSymbolicLink();
-            let isDir = entry.isDirectory();
-            let isFile = entry.isFile();
-
-            if (isSymlink) {
-                if (!follow) continue; // default: ignore symlinks entirely
-                try {
-                    const st = fs.statSync(childAbs); // follows the link
-                    isDir = st.isDirectory();
-                    isFile = st.isFile();
-                } catch {
-                    continue; // broken link
-                }
-            }
-
-            if (isDir) {
-                if (!recurse) continue;
-                let real;
-                try {
-                    real = fs.realpathSync(childAbs);
-                } catch {
-                    continue;
-                }
-                if (visited.has(real)) continue; // symlink-loop guard
-                visited.add(real);
-                walk(childAbs, childRel);
-            } else if (isFile && isImageFile(entry.name)) {
-                if (isSymlink) {
-                    try {
-                        const real = fs.realpathSync(childAbs);
-                        out.push({
-                            path: path.relative(baseReal, real).split(path.sep).join('/'),
-                            category: catOf(childRel),
-                        });
-                    } catch {
-                        continue;
-                    }
-                } else {
-                    out.push({ path: served(childRel), category: catOf(childRel) });
-                }
-            }
-        }
-    };
-    walk(root, '');
-    return out;
-}
 
 async function findImages() {
     try {
@@ -240,13 +140,12 @@ async function findImages() {
                 `Scanning directory: ${inputArg}${recursive ? ' (recursive)' : ''}` +
                     `${followSymlinks ? ' (following symlinks)' : ''}`
             );
-            const items = collectFromDir(
-                path.resolve(inputArg),
-                recursive,
-                followSymlinks,
+            const items = collectFromDir(path.resolve(inputArg), {
+                recurse: recursive,
+                follow: followSymlinks,
                 baseReal,
-                rootPosix
-            );
+                rootPosix,
+            });
             imageFiles = items.map(it => it.path);
 
             if (recursive) {
@@ -270,6 +169,8 @@ async function findImages() {
             console.error('No images found.');
             process.exit(1);
         }
+
+        imageSetHash = hash8([...imageFiles].sort().join('\n'));
 
         console.log(`Found ${imageFiles.length} images`);
         console.log(`Starting server at http://localhost:${PORT}`);
@@ -300,7 +201,7 @@ const mimeTypes = {
 const server = http.createServer((req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
@@ -331,9 +232,113 @@ const server = http.createServer((req, res) => {
             JSON.stringify({
                 images: imageFiles,
                 categories: imageCategories,
-                options: { out: outDir, noSingleStoreUnchanged, singleKeyAdvance },
+                options: {
+                    out: outDir,
+                    noSingleStoreUnchanged,
+                    singleKeyAdvance,
+                    focusMode,
+                    sessionEnabled,
+                    imageSetHash,
+                },
             })
         );
+        return;
+    }
+
+    // Resumable-session transaction log (single latest file in baseDir).
+    if (req.url === '/session') {
+        res.setHeader('Content-Type', 'application/json');
+
+        if (!sessionEnabled) {
+            res.writeHead(200);
+            res.end(JSON.stringify({ disabled: true }));
+            return;
+        }
+
+        const sessionPath = path.join(baseDir, SESSION_FILE);
+
+        if (req.method === 'GET') {
+            let data = {};
+            try {
+                data = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+            } catch {
+                data = {};
+            }
+            res.writeHead(200);
+            res.end(JSON.stringify(data));
+            return;
+        }
+
+        if (req.method === 'DELETE') {
+            try {
+                fs.unlinkSync(sessionPath);
+            } catch (err) {
+                const code = err && typeof err === 'object' && 'code' in err ? err.code : undefined;
+                if (code !== 'ENOENT') {
+                    res.writeHead(200);
+                    res.end(
+                        JSON.stringify({
+                            ok: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        })
+                    );
+                    return;
+                }
+            }
+            res.writeHead(200);
+            res.end(JSON.stringify({ ok: true }));
+            return;
+        }
+
+        if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    const parsed = JSON.parse(body);
+                    fs.writeFileSync(sessionPath, JSON.stringify(parsed, null, 2));
+                    if (process.platform === 'win32') {
+                        execFile('attrib', ['+h', sessionPath], () => {});
+                    }
+                    res.writeHead(200);
+                    res.end(JSON.stringify({ ok: true }));
+                } catch (err) {
+                    res.writeHead(200);
+                    res.end(
+                        JSON.stringify({
+                            ok: false,
+                            error: err instanceof Error ? err.message : String(err),
+                        })
+                    );
+                }
+            });
+            return;
+        }
+
+        res.writeHead(405);
+        res.end(JSON.stringify({ ok: false, error: 'method not allowed' }));
+        return;
+    }
+
+    // Serve the extracted pure-logic ES modules to the browser.
+    if (req.url && req.url.startsWith('/lib/')) {
+        const name = req.url.slice('/lib/'.length);
+        if (name.includes('/') || name.includes('..') || !name.endsWith('.js')) {
+            res.writeHead(404);
+            res.end('Not found');
+            return;
+        }
+        fs.readFile(path.join(__dirname, 'lib', name), (err, data) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('Not found');
+                return;
+            }
+            res.writeHead(200, { 'Content-Type': 'text/javascript' });
+            res.end(data);
+        });
         return;
     }
 
@@ -369,21 +374,23 @@ const server = http.createServer((req, res) => {
     res.end('Not found');
 });
 
-// Start the server
-findImages().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Open your browser and navigate to: http://localhost:${PORT}`);
+// Start the server only when run directly (not when imported by tests).
+if (isMain) {
+    findImages().then(() => {
+        server.listen(PORT, () => {
+            console.log(`Open your browser and navigate to: http://localhost:${PORT}`);
+        });
     });
-});
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-    console.log('\n\nShutting down server...');
-    server.close(() => {
-        console.log('Server closed');
+    // Handle graceful shutdown
+    process.on('SIGINT', () => {
+        console.log('\n\nShutting down server...');
+        server.close(() => {
+            console.log('Server closed');
+        });
+        // Force exit after a short delay if server hasn't closed
+        setTimeout(() => {
+            process.exit(0);
+        }, 100);
     });
-    // Force exit after a short delay if server hasn't closed
-    setTimeout(() => {
-        process.exit(0);
-    }, 100);
-});
+}

@@ -24,7 +24,11 @@ npm install
 ## Usage
 
 ```
-Usage: node server.js [-r|--recursive] [-h|--help] <directory|glob>
+Usage: node server.js [-r|--recursive] [--out <dir>] [--follow-symlinks]
+                      [--single-key-advance|--no-single-key-advance]
+                      [--no-single-store-unchanged]
+                      [--omnibar-focus|--hotkey-focus] [--no-session]
+                      [-h|--help] <directory|glob>
 ```
 
 The positional argument is either an existing **directory** or a **glob**
@@ -43,10 +47,19 @@ pattern. Options are order-independent.
 - `--no-single-store-unchanged` — leave an item in place (no intern, no
   reference) when its category set is unchanged from `-r` discovery. Default:
   every kept item is interned and referenced.
+- `--omnibar-focus` / `--hotkey-focus` — sorter-screen focus behavior.
+  `--omnibar-focus` (default): the category omnibar holds focus and re-grabs it
+  on every image, so you fuzzy-find categories by typing; `Esc` releases it so
+  the bare `1`-`9` / `a`-`z` keys work until the next image. `--hotkey-focus`:
+  the omnibar does not auto-focus, the bare keys drive everything, and `/`
+  jumps to the omnibar. Toggle live from the pill at the omnibar's right end.
 - `--follow-symlinks` — follow symlinked files and directories while scanning.
   Default: symlinks are ignored entirely (not collected, not descended). With
   the flag, a symlinked file is interned by its `realpath` and symlink loops
   are guarded against.
+- `--no-session` — disable the resumable session. By default every decision is
+  autosaved to `.imgsort-session.json` in the start directory so you can quit
+  and resume, undo and redo (see [Sessions](#sessions)); this turns it off.
 - `-h`, `--help` — print help and exit.
 
 Image match is by file extension, **case-insensitive** (`.JPG`, `.Png`, … all
@@ -77,9 +90,7 @@ Quote the glob so the shell doesn't expand it.
 ### `-h` output
 
 Run `node server.js --help` for the full option reference (kept in sync with the
-CLI). It documents `-r`, `--out`, `--single-key-advance` /
-`--no-single-key-advance`, `--no-single-store-unchanged`, and
-`--follow-symlinks`.
+CLI) — every flag listed above, with examples.
 
 Then open your browser to: http://localhost:3000
 
@@ -117,11 +128,31 @@ letter is reserved for actions (`⌘N` / `Ctrl+N` = new category).
 
 ## Controls
 
+### The category omnibar
+
+A permanent search box sits at the top of the controls tile. Type to fuzzy-find
+categories (subsequence match, ranked by consecutive runs, word-boundary starts
+after `/ - _` space, and earliness); `↑`/`↓` move the highlight, `Enter` picks
+it, `⌘`/`Ctrl`+`1`-`9` jump to row N, `Esc` clears then blurs. If what you typed
+is a valid new category name and nothing matches it exactly, the last row is
+`Create "<name>"` — picking it creates the category and applies it to the
+current image. Picking any row routes through the same toggle-and-maybe-advance
+path as the category buttons.
+
+The pill at the box's right end switches **focus mode** (`🔍 Search` /
+`⌨ Hotkeys`), also set at launch with `--omnibar-focus` / `--hotkey-focus`. In
+Search mode the box keeps focus and re-grabs it on every image (so typing always
+filters; press `Esc` to use the bare hotkeys); in Hotkeys mode the bare keys
+drive everything and `/` jumps to the box. The dock shows a `🔍` / `⌨`
+indicator of the current mode.
+
 ### Keyboard Shortcuts
 
 - **1-9** / **a-z** (bare): toggle that category for the current image
   (multi-select). Whether this also advances is the effective advance mode
-  (below). Ignored while ⌘/Ctrl/Alt is held.
+  (below). Ignored while ⌘/Ctrl/Alt is held, or — in Search mode — while the
+  omnibar holds focus.
+- **/**: focus the omnibar · **Esc** in it: clear, then release focus
 - **⌘N** / **Ctrl+N**: create a new category (auto-applied to the current image)
 - **Space** / **Down Arrow**: next image · **Up Arrow**: previous image
 
@@ -151,6 +182,35 @@ glyph marks a pinned state; a pinned mode ignores position and the base flag.
   selected ones are highlighted
 - **+ New folder**: create a new category (auto-applied to the current image)
 - **Previous/Next Buttons**: navigate between images
+- **↶ / ↷** (dock): undo / redo the last decision
+
+## Sessions
+
+Your sort is a transaction log — one entry per decision (toggle a category, set,
+or create-and-apply). `folders` and `assignments` are always _derived_ by
+replaying that log onto the run's base (reserved + discovered categories). This
+powers both undo/redo and resume.
+
+- **Undo / redo** — `⌘Z` / `Ctrl+Z` and `⌘⇧Z` / `Ctrl+Y` (also from inside the
+  omnibar), or the `↶` / `↷` buttons in the dock. Undo jumps you back to the
+  image it changed.
+- **Autosave** — unless started with `--no-session`, every decision and
+  navigation is debounced-saved (~0.5s) to `.imgsort-session.json` in the start
+  directory (a hidden dotfile; also flagged hidden on Windows). A small
+  `saving… / saved ✓` indicator sits by the Clear link.
+- **Resume** — on the next launch the saved log is **rolled forward onto the
+  current scan's base**: saved decisions win, and any decision whose image is no
+  longer present is dropped. A banner reports `Resumed N saved decisions`
+  (`… from a different image set` when the image set changed; `(M skipped: …)`
+  when some were dropped) with a `Discard & start fresh` action. The pruned log
+  is re-saved immediately. The `currentIndex` / frontier / advance-pin restore
+  is best-effort.
+- **Clear session** — the link in the controls tile deletes the file (and any
+  browser copy) and resets to the base sort after a confirm.
+- **Browser fallback** — if the server can't write the file (read-only dir,
+  etc.) imgsort falls back to `localStorage` and shows a dismissible
+  `Session saved in this browser only.` strip. That copy is also read on load if
+  no server-side file exists.
 
 ## How It Works
 
@@ -213,13 +273,18 @@ Use the store copy for real work.
 - **Re-running imgsort on an already-built output tree**: the reference symlinks
   pointing at a prior store are only followed and re-processed with
   `--follow-symlinks`; by default they're skipped entirely. imgsort does **not**
-  yet special-case or ignore `.imgsort-store-*` directories on a rescan.
+  yet special-case or ignore `.imgsort-store-*` directories — or a stale
+  `.imgsort-session.json` — on a rescan; a session is only cleaned via the
+  Discard / Clear actions.
 - **Many stores**: each run creates its own store; there's no consolidation of
   multiple stores into one yet.
+- **Session `meta` resume** (`currentIndex` / frontier / advance-pin) is
+  best-effort — the transaction log itself always replays faithfully.
 
 ## Notes
 
-- All assignments are stored in memory (not saved to disk)
+- The sort lives in a transaction log, autosaved to `.imgsort-session.json`
+  unless `--no-session` (see [Sessions](#sessions))
 - Nothing is moved or deleted until you run the generated script yourself
 - Press Ctrl+C in the terminal to stop the server
 
@@ -227,10 +292,19 @@ Use the store copy for real work.
 
 ```bash
 npm run lint        # eslint (**/*.js)
-npm run typecheck   # tsc --noEmit, checkJS (*.js)
-npm run format      # prettier --write .  (the only automated check for index.html)
+npm run typecheck   # tsc --noEmit, checkJS (*.js, lib/, test/)
+npm run format      # prettier --write .  (the only automated check for index.html's inline JS/CSS)
+npm test            # vitest (test/**/*.test.js)
 ```
 
-All three should pass before committing. `index.html` is a single self-contained
-file with inline CSS/JS — keep it that way; no build step, no new dependencies
-without discussion. See `CLAUDE.md` for repo conventions.
+All four should pass before committing.
+
+The pure, DOM-free logic lives in `lib/*.js` ES modules — `hash.js` (FNV-1a),
+`fuzzy.js` (omnibar ranking), `categories.js` (category-set rules, key badges),
+`txns.js` (`replay()` folds the transaction log onto the discovered base),
+`script.js` (`buildOps` + the POSIX / Windows lowerers), `scan.js` (`parseArgs`,
+`isImageFile`, `collectFromDir`). `server.js` imports them directly; the browser
+loads them from the `/lib/<name>.js` route, and `index.html`'s inline
+`<script type="module">` keeps only the DOM wiring. `index.html` stays a single
+self-contained file (inline CSS + that one script) — no bundler, no new runtime
+deps. See `CLAUDE.md` for repo conventions.

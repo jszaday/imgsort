@@ -5,35 +5,52 @@ Guidance for Claude Code when working in this repo.
 ## Project
 
 `imgsort` is a local, browser-based image-triage tool. A Node http server
-(`server.js`, ESM, no framework) serves a single self-contained page
-(`index.html` with inline CSS/JS) and the matched image files. Run it with a
-glob: `node server.js "**/*.{jpg,jpeg,png,gif,webp}"`, then open
-`http://localhost:3000`.
+(`server.js`, ESM, no framework) serves `index.html` (inline CSS + a DOM-wiring
+script) plus the matched image files. Run it with a directory or glob:
+`node server.js -r ./photos`, then open `http://localhost:3000`.
 
-- Sorting model: each image is assigned to a named folder. `uncategorized`
-  (default for every image) and `trash` always exist and are reserved; users
-  add folders on the fly, assigned via digit keys `1`-`9` (so max 9 folders).
-- Nothing touches the filesystem. The results screen is a checklist (folders +
-  per-item checkboxes, all checked by default) that drives a generated shell
-  script the user runs themselves — a POSIX `sh` tab (`rm -i` for trash) and a
-  macOS tab (`#!/bin/zsh`, `trash` CLI). macOS tab auto-selects by browser
-  platform. `uncategorized` is a normal destination folder (`mv` into
-  `./uncategorized/`); only `trash` is special.
-- `/images` returns paths relative to `process.cwd()`; the generated script has
-  no `cd` and is meant to be run from that directory, referencing files as
-  `./<path>`.
+- **Category model**: each image holds a _set_ of categories. `uncategorized`
+  (default) and `trash` always exist and are reserved; `trash` is exclusive.
+  Categories are keyed `1`-`9` then `a`-`z` (cap 35); a fuzzy-find **omnibar**
+  is the scaling path beyond that. `-r` seeds a category per subdirectory.
+- **Nothing touches the filesystem directly.** The results screen is a checklist
+  that drives a generated script (POSIX `sh` / macOS `zsh` / Windows PowerShell
+  tabs) the user runs themselves: every kept image is `mv`'d once into a hidden
+  per-run **single store**, and each category gets a **navigational reference**
+  back — a relative symlink on POSIX/macOS, a `.lnk` on Windows. `trash` items
+  are interned but unreferenced; nothing is deleted.
+- **Sessions**: every decision is a transaction in an append-only log
+  (`txns[]`), the source of truth from which `folders`/`assignments` are
+  replayed. Autosaved to a hidden `.imgsort-session.json` (localStorage
+  fallback); powers undo/redo and roll-forward resume. `--no-session` disables.
+- `/images` returns paths relative to `process.cwd()` plus an `options` object;
+  the generated script has no `cd` and runs from that directory.
+
+## Layout
+
+- `server.js` — the http server + CLI. Imports pure helpers from `lib/`.
+- `index.html` — inline CSS + a script that wires the DOM and `import`s pure
+  logic from `lib/*.js` (served at `/lib/...`). Not a bundler — native ESM.
+- `lib/*.js` — pure, DOM-free, dependency-free modules (hashing, fuzzy match,
+  transaction replay, script generation, directory scan / arg parse). This is
+  where testable logic lives; keep it free of `document`/`window`/`fs` where
+  practical (scan takes `fs` calls as injected params or is tested via a temp
+  dir).
+- `test/*.test.js` — vitest.
 
 ## Checks
 
-All three must pass before finishing work:
+All must pass before finishing work:
 
 ```
-npm run lint        # eslint, globs **/*.js only
-npm run typecheck   # tsc --noEmit, checkJS on *.js only
+npm run lint        # eslint, **/*.js (lib + test included)
+npm run typecheck   # tsc --noEmit, checkJS
 npm run format      # prettier --write .  (covers index.html's inline JS)
+npm test            # vitest run
 ```
 
-eslint/tsc do not see `index.html`; prettier is its only automated check.
+eslint/tsc do not see `index.html`'s inline script; prettier is its only
+automated check. Logic worth testing belongs in `lib/`, not inline.
 
 ## Working agreements
 
@@ -60,9 +77,10 @@ eslint/tsc do not see `index.html`; prettier is its only automated check.
   The coordinator keeps design decisions, review, and git. Send follow-up
   requirements before the agent finishes; a completed agent may miss a queued
   message and need an explicit resume.
-- Match existing style: 4-space indent, single quotes, semicolons. Keep
-  `index.html` a single file with inline CSS/JS. No new dependencies and no
-  build step without discussion.
+- Match existing style: 4-space indent, single quotes, semicolons. `index.html`
+  keeps inline CSS + its DOM-wiring script, but pure logic goes in `lib/*.js`
+  (imported by both `index.html` and `server.js`). No build step, and no new
+  runtime dependencies, without discussion (dev deps: `vitest` is in).
 - **Sensible defaults from context, with a manual override always present**
   (e.g. the macOS/POSIX script tab auto-selects by platform but you can switch).
 - **The coordinator verifies subagent output before reporting it** — read the
