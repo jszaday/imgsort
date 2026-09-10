@@ -13,21 +13,75 @@ const __dirname = dirname(__filename);
 const PORT = 3000;
 /** @type {string[]} */
 let imageFiles = []; // Paths relative to baseDir
+/** @type {{ [path: string]: string }} */
+let imageCategories = {}; // Only entries whose category !== 'uncategorized'
 let baseDir = '';
-
-// Get glob pattern from command line arguments
-const args = process.argv.slice(2);
-if (args.length === 0) {
-    console.error('Usage: node server.js <glob-pattern>');
-    console.error('Example: node server.js "**/*.{jpg,jpeg,png,gif,webp}"');
-    console.error('Example: node server.js "./photos/**/*.jpg"');
-    process.exit(1);
-}
-
-const globPattern = args[0];
 
 // Supported image extensions
 const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']);
+
+const USAGE = 'Usage: node server.js [-r|--recursive] [-h|--help] <directory|glob>';
+
+function printUsage() {
+    console.error(USAGE);
+}
+
+function printHelp() {
+    const exts = [...imageExtensions].map(e => e.slice(1)).join(',');
+    console.log(
+        [
+            'imgsort — local browser-based image-triage tool',
+            '',
+            USAGE,
+            '',
+            'Arguments:',
+            '  <directory|glob>   An existing directory to scan for images, or a glob',
+            '                     pattern (quoted). Image match is by extension,',
+            `                     case-insensitive: ${exts}`,
+            '',
+            'Options:',
+            '  -r, --recursive    When the argument is a directory, walk it recursively.',
+            "                     With -r, each image's category is seeded from its",
+            '                     parent directory relative to the given root.',
+            '                     Ignored for glob arguments.',
+            '  -h, --help         Show this help and exit.',
+            '',
+            'Examples:',
+            '  node server.js ./photos                 # top level of ./photos',
+            '  node server.js -r ./photos             # ./photos and all subdirectories',
+            '  node server.js "**/*.{jpg,jpeg,png}"  # glob (quote to protect from the shell)',
+            '',
+            `Then open http://localhost:${PORT}`,
+        ].join('\n')
+    );
+}
+
+// Parse command line arguments
+const argv = process.argv.slice(2);
+let recursive = false;
+/** @type {string[]} */
+const positionals = [];
+for (const arg of argv) {
+    if (arg === '-h' || arg === '--help') {
+        printHelp();
+        process.exit(0);
+    } else if (arg === '-r' || arg === '--recursive') {
+        recursive = true;
+    } else if (arg.startsWith('-') && arg !== '-') {
+        console.error(`Unknown option: ${arg}`);
+        printUsage();
+        process.exit(1);
+    } else {
+        positionals.push(arg);
+    }
+}
+
+if (positionals.length !== 1) {
+    printUsage();
+    process.exit(1);
+}
+
+const inputArg = positionals[0];
 
 /**
  * @param {string} filename
@@ -38,24 +92,71 @@ function isImageFile(filename) {
     return imageExtensions.has(ext);
 }
 
+/**
+ * Recursively (or not) collect image files under a directory.
+ * @param {string} root
+ * @param {boolean} recurse
+ * @returns {string[]} paths relative to root, POSIX-normalized
+ */
+function collectFromDir(root, recurse) {
+    /** @type {string[]} */
+    const out = [];
+    /** @param {string} rel */
+    const walk = rel => {
+        const abs = rel === '' ? root : path.join(root, rel);
+        const entries = fs.readdirSync(abs, { withFileTypes: true });
+        for (const entry of entries) {
+            const childRel = rel === '' ? entry.name : `${rel}/${entry.name}`;
+            if (entry.isDirectory()) {
+                if (recurse) walk(childRel);
+            } else if (entry.isFile() && isImageFile(entry.name)) {
+                out.push(childRel);
+            }
+        }
+    };
+    walk('');
+    return out;
+}
+
 async function findImages() {
     try {
-        console.log(`Searching for images matching: ${globPattern}`);
+        baseDir = process.cwd();
 
-        const files = await glob(globPattern, {
-            nodir: true,
-            absolute: false,
-        });
-
-        imageFiles = files.filter(isImageFile);
-
-        if (imageFiles.length === 0) {
-            console.error('No images found matching the pattern.');
-            process.exit(1);
+        let isDir = false;
+        try {
+            isDir = fs.statSync(inputArg).isDirectory();
+        } catch {
+            isDir = false;
         }
 
-        // Store the base directory for serving files
-        baseDir = process.cwd();
+        if (isDir) {
+            const rootRel = path.relative(fs.realpathSync(baseDir), fs.realpathSync(inputArg));
+            const rootPosix = rootRel.split(path.sep).join('/');
+            console.log(`Scanning directory: ${inputArg}${recursive ? ' (recursive)' : ''}`);
+            const rels = collectFromDir(path.resolve(inputArg), recursive);
+            imageFiles = rels.map(rel => (rootPosix ? `${rootPosix}/${rel}` : rel));
+
+            if (recursive) {
+                rels.forEach((rel, i) => {
+                    const dir = path.posix.dirname(rel);
+                    if (dir && dir !== '.') {
+                        imageCategories[imageFiles[i]] = dir;
+                    }
+                });
+            }
+        } else {
+            console.log(`Searching for images matching: ${inputArg}`);
+            const files = await glob(inputArg, {
+                nodir: true,
+                absolute: false,
+            });
+            imageFiles = files.filter(isImageFile);
+        }
+
+        if (imageFiles.length === 0) {
+            console.error('No images found.');
+            process.exit(1);
+        }
 
         console.log(`Found ${imageFiles.length} images`);
         console.log(`Starting server at http://localhost:${PORT}`);
@@ -113,7 +214,7 @@ const server = http.createServer((req, res) => {
     // API endpoint to get list of images (returns paths relative to baseDir)
     if (req.url === '/images') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(imageFiles));
+        res.end(JSON.stringify({ images: imageFiles, categories: imageCategories }));
         return;
     }
 

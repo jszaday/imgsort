@@ -300,6 +300,85 @@
                 color: #fff;
                 border-color: #666;
             }
+
+            .checklist-group {
+                margin-bottom: 12px;
+                background: #2a2a2a;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .checklist-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 16px;
+                background: #333;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            .checklist-header .caret {
+                width: 12px;
+                font-size: 11px;
+                color: #888;
+            }
+
+            .checklist-header .group-name {
+                font-weight: 600;
+                color: #e0e0e0;
+            }
+
+            .checklist-group.trash .checklist-header .group-name {
+                color: #f44336;
+            }
+
+            .checklist-group.uncategorized .checklist-header .group-name {
+                color: #888;
+            }
+
+            .checklist-header .group-count {
+                font-size: 13px;
+                color: #888;
+            }
+
+            .checklist-header .group-hint {
+                margin-left: auto;
+                font-family: monospace;
+                font-size: 12px;
+                color: #666;
+            }
+
+            .checklist-items {
+                list-style: none;
+                padding: 8px 16px 12px 38px;
+            }
+
+            .checklist-items li {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 4px 0;
+            }
+
+            .checklist-items li label {
+                font-family: monospace;
+                font-size: 13px;
+                color: #ccc;
+                cursor: pointer;
+            }
+
+            .checklist-group.collapsed .checklist-items {
+                display: none;
+            }
+
+            .checklist-group input[type='checkbox'] {
+                width: 15px;
+                height: 15px;
+                accent-color: #4caf50;
+                cursor: pointer;
+                flex: none;
+            }
         </style>
     </head>
     <body>
@@ -325,8 +404,9 @@
 
                 <div class="status" id="status">Folder: uncategorized</div>
                 <div class="help-text" id="helpText">
-                    Press 1-9 to assign the image to a folder and advance. Up/Down arrows navigate.
-                    "New folder" adds another numbered option.
+                    Press 1-9 to assign the image to a folder and advance; for the 10th folder
+                    onward use the letter key with a modifier (⌘ on macOS, Ctrl elsewhere, e.g. ⌘A /
+                    ^A). Up/Down arrows navigate. "New folder" adds another option (up to 35 total).
                 </div>
             </div>
         </div>
@@ -335,7 +415,12 @@
             <div class="results">
                 <h2>Sorting Complete!</h2>
 
-                <div id="resultsSections"></div>
+                <p class="help-text" style="text-align: left; margin-bottom: 15px">
+                    Check the items you want the script to act on. Unchecked items are left
+                    untouched. The script below updates live.
+                </p>
+
+                <div id="checklist"></div>
 
                 <div class="results-section">
                     <h3>Generated script</h3>
@@ -359,21 +444,75 @@
             let images = [];
             let currentIndex = 0;
 
-            // Folders in numbered order. 1 = uncategorized, 2 = trash, 3..9 = user folders.
+            // Folders in key order: 1..9 by digit, 10th+ by letter a, b, c, …
+            // 1 = uncategorized, 2 = trash, then discovered/user folders.
             const RESERVED = ['uncategorized', 'trash'];
+            const MAX_FOLDERS = 35; // 9 digits + 26 letters
             /** @type {string[]} */
             let folders = ['uncategorized', 'trash'];
 
             // { index: folderName }
             /** @type {Object.<number, string>} */
             let assignments = {};
+            // { index: originally-discovered category } (defaults to 'uncategorized')
+            /** @type {Object.<number, string>} */
+            let discovered = {};
+
+            function isMacPlatform() {
+                const p = navigator.userAgentData && navigator.userAgentData.platform;
+                return p === 'macOS' || /Mac/.test(navigator.platform);
+            }
+
+            function isWindowsPlatform() {
+                const p = navigator.userAgentData && navigator.userAgentData.platform;
+                return p === 'Windows' || /Win/.test(navigator.platform);
+            }
+
+            const DISPLAY_SEP = isWindowsPlatform() ? '\\' : '/';
+
+            /**
+             * Convert an internal POSIX path/category to the viewer's platform
+             * separator for display only. Internal values stay POSIX.
+             * @param {string} p
+             * @returns {string}
+             */
+            function toDisplay(p) {
+                return DISPLAY_SEP === '/' ? p : p.split('/').join(DISPLAY_SEP);
+            }
+
+            /**
+             * The key for the nth folder: '1'..'9' then 'a', 'b', …
+             * @param {number} i
+             * @returns {string}
+             */
+            function folderKey(i) {
+                return i < 9 ? String(i + 1) : String.fromCharCode(97 + (i - 9));
+            }
+
+            /**
+             * Badge text for the nth folder's key.
+             * @param {number} i
+             * @returns {string}
+             */
+            function folderKeyBadge(i) {
+                if (i < 9) return String(i + 1);
+                const glyph = isMacPlatform() ? '⌘' : '^';
+                return glyph + folderKey(i).toUpperCase();
+            }
 
             async function loadImages() {
                 const response = await fetch('/images');
-                images = await response.json();
+                const data = await response.json();
+                images = data.images || [];
+                const categories = data.categories || {};
 
-                images.forEach((_, index) => {
-                    assignments[index] = 'uncategorized';
+                images.forEach((image, index) => {
+                    const category = categories[image] || 'uncategorized';
+                    discovered[index] = category;
+                    assignments[index] = category;
+                    if (category !== 'uncategorized' && !folders.includes(category)) {
+                        folders.push(category);
+                    }
                 });
 
                 renderFolders();
@@ -389,7 +528,7 @@
                 currentIndex = index;
                 const image = images[index];
 
-                document.getElementById('filename').textContent = image;
+                document.getElementById('filename').textContent = toDisplay(image);
                 document.getElementById('progress').textContent = `${index + 1}/${images.length}`;
                 document.getElementById('image').src = `/image/${encodeURIComponent(image)}`;
 
@@ -402,7 +541,7 @@
                 const folder = assignments[currentIndex];
                 const statusEl = document.getElementById('status');
                 statusEl.className = `status ${folder}`;
-                statusEl.textContent = `Folder: ${folder}`;
+                statusEl.textContent = `Folder: ${toDisplay(folder)}`;
             }
 
             function updateButtons() {
@@ -424,9 +563,9 @@
 
                     const key = document.createElement('span');
                     key.className = 'key';
-                    key.textContent = String(i + 1);
+                    key.textContent = folderKeyBadge(i);
                     button.appendChild(key);
-                    button.appendChild(document.createTextNode(name));
+                    button.appendChild(document.createTextNode(toDisplay(name)));
 
                     button.addEventListener('click', () => {
                         assignFolder(name);
@@ -435,7 +574,7 @@
                     container.appendChild(button);
                 });
 
-                if (folders.length < 9) {
+                if (folders.length < MAX_FOLDERS) {
                     const newButton = document.createElement('button');
                     newButton.className = 'btn btn-new-folder';
                     newButton.textContent = '+ New folder';
@@ -457,8 +596,8 @@
                     setFolderError('Folder name cannot be empty.');
                     return;
                 }
-                if (name.includes('/')) {
-                    setFolderError('Folder name cannot contain "/".');
+                if (name.includes('/') || name.includes('\\')) {
+                    setFolderError('Folder name cannot contain "/" or "\\".');
                     return;
                 }
                 if (RESERVED.includes(name)) {
@@ -469,8 +608,8 @@
                     setFolderError(`Folder "${name}" already exists.`);
                     return;
                 }
-                if (folders.length >= 9) {
-                    setFolderError('Maximum of 9 folders reached.');
+                if (folders.length >= MAX_FOLDERS) {
+                    setFolderError(`Maximum of ${MAX_FOLDERS} folders reached.`);
                     return;
                 }
 
@@ -485,11 +624,14 @@
                 renderFolders();
             }
 
-            function assignByDigit(digit) {
-                const index = digit - 1;
+            function assignByIndex(index) {
                 if (index < 0 || index >= folders.length) return;
                 assignFolder(folders[index]);
                 navigate(1);
+            }
+
+            function assignByDigit(digit) {
+                assignByIndex(digit - 1);
             }
 
             function navigate(direction) {
@@ -511,23 +653,23 @@
             }
 
             /**
-             * @param {Object.<string, string[]>} grouped
+             * @param {Object.<string, string[]>} checkedByFolder - checked paths per folder
              * @param {'posix' | 'macos'} variant
+             * @param {number} uncheckedCount
              * @returns {string}
              */
-            function buildScript(grouped, variant) {
+            function buildScript(checkedByFolder, variant, uncheckedCount) {
                 const shebang = variant === 'macos' ? '#!/bin/zsh' : '#!/bin/sh';
+
+                const total = folders.reduce((n, f) => n + (checkedByFolder[f] || []).length, 0);
+                if (total === 0) {
+                    return [shebang, 'set -e', '', '# nothing selected'].join('\n') + '\n';
+                }
+
                 const lines = [shebang, 'set -e', ''];
 
                 folders.forEach(folder => {
-                    const files = grouped[folder] || [];
-
-                    if (folder === 'uncategorized') {
-                        lines.push(`# ${files.length} file(s) left in place (uncategorized)`);
-                        lines.push('');
-                        return;
-                    }
-
+                    const files = checkedByFolder[folder] || [];
                     if (files.length === 0) return;
 
                     if (folder === 'trash') {
@@ -553,6 +695,10 @@
                     lines.push('');
                 });
 
+                if (uncheckedCount > 0) {
+                    lines.push(`# ${uncheckedCount} item(s) left unchecked and untouched`);
+                }
+
                 return lines.join('\n').replace(/\n+$/, '\n');
             }
 
@@ -560,26 +706,147 @@
             let groupedFiles = {};
             /** @type {'posix' | 'macos'} */
             let scriptVariant = 'posix';
-
-            function isMacOS() {
-                const uaPlatform = navigator.userAgentData && navigator.userAgentData.platform;
-                return uaPlatform === 'macOS' || /Mac/.test(navigator.platform);
-            }
+            /** @type {Set<string>} */
+            let checkedPaths = new Set();
+            /** @type {Set<string>} */
+            let collapsedFolders = new Set();
+            /** @type {Object.<string, string>} */
+            let discoveredByPath = {};
 
             function selectVariant(variant) {
                 scriptVariant = variant;
                 document.getElementById('tabPosix').classList.toggle('active', variant === 'posix');
                 document.getElementById('tabMacos').classList.toggle('active', variant === 'macos');
+                renderScript();
+            }
 
-                const script = buildScript(groupedFiles, variant);
+            function renderScript() {
+                /** @type {Object.<string, string[]>} */
+                const checkedByFolder = {};
+                let uncheckedCount = 0;
+                folders.forEach(folder => {
+                    const files = groupedFiles[folder] || [];
+                    // Skip items already sitting in their originally-discovered category.
+                    const movable = files.filter(file => discoveredByPath[file] !== folder);
+                    const checked = movable.filter(file => checkedPaths.has(file));
+                    checkedByFolder[folder] = checked;
+                    uncheckedCount += movable.length - checked.length;
+                });
+
+                const script = buildScript(checkedByFolder, scriptVariant, uncheckedCount);
                 document.getElementById('scriptBlock').textContent = script;
 
-                const downloadName = variant === 'macos' ? 'imgsort.command' : 'imgsort.sh';
+                const downloadName = scriptVariant === 'macos' ? 'imgsort.command' : 'imgsort.sh';
                 setupCopyButton('copyScriptBtn', script);
                 setupDownloadButton('downloadScriptBtn', script, downloadName);
 
                 console.log(`\n=== GENERATED SCRIPT (${downloadName}) ===\n`);
                 console.log(script);
+            }
+
+            function renderChecklist() {
+                const container = document.getElementById('checklist');
+                container.innerHTML = '';
+
+                folders.forEach((folder, gi) => {
+                    const files = groupedFiles[folder] || [];
+                    if (files.length === 0) return;
+
+                    const group = document.createElement('div');
+                    group.className = `checklist-group ${folder}`;
+                    const collapsed = collapsedFolders.has(folder);
+                    if (collapsed) group.classList.add('collapsed');
+
+                    const header = document.createElement('div');
+                    header.className = 'checklist-header';
+
+                    const caret = document.createElement('span');
+                    caret.className = 'caret';
+                    caret.textContent = collapsed ? '▶' : '▼';
+
+                    const master = document.createElement('input');
+                    master.type = 'checkbox';
+
+                    const name = document.createElement('span');
+                    name.className = 'group-name';
+                    name.textContent = toDisplay(folder);
+
+                    const count = document.createElement('span');
+                    count.className = 'group-count';
+                    count.textContent = `(${files.length})`;
+
+                    const hint = document.createElement('span');
+                    hint.className = 'group-hint';
+                    hint.textContent =
+                        folder === 'trash' ? '→ ./trash/ (delete)' : `→ ./${toDisplay(folder)}/`;
+
+                    header.appendChild(caret);
+                    header.appendChild(master);
+                    header.appendChild(name);
+                    header.appendChild(count);
+                    header.appendChild(hint);
+
+                    const list = document.createElement('ul');
+                    list.className = 'checklist-items';
+
+                    /** @type {{ box: HTMLInputElement, file: string }[]} */
+                    const items = [];
+
+                    const syncMaster = () => {
+                        const checkedCount = items.filter(item => item.box.checked).length;
+                        master.checked = checkedCount === items.length;
+                        master.indeterminate = checkedCount > 0 && checkedCount < items.length;
+                    };
+
+                    files.forEach((file, ii) => {
+                        const li = document.createElement('li');
+
+                        const box = document.createElement('input');
+                        box.type = 'checkbox';
+                        box.id = `chk_${gi}_${ii}`;
+                        box.checked = checkedPaths.has(file);
+
+                        const label = document.createElement('label');
+                        label.htmlFor = box.id;
+                        label.textContent = toDisplay(file);
+
+                        box.addEventListener('change', () => {
+                            if (box.checked) checkedPaths.add(file);
+                            else checkedPaths.delete(file);
+                            syncMaster();
+                            renderScript();
+                        });
+
+                        items.push({ box, file });
+                        li.appendChild(box);
+                        li.appendChild(label);
+                        list.appendChild(li);
+                    });
+
+                    syncMaster();
+
+                    master.addEventListener('click', e => e.stopPropagation());
+                    master.addEventListener('change', () => {
+                        items.forEach(({ box, file }) => {
+                            box.checked = master.checked;
+                            if (master.checked) checkedPaths.add(file);
+                            else checkedPaths.delete(file);
+                        });
+                        master.indeterminate = false;
+                        renderScript();
+                    });
+
+                    header.addEventListener('click', () => {
+                        const nowCollapsed = group.classList.toggle('collapsed');
+                        if (nowCollapsed) collapsedFolders.add(folder);
+                        else collapsedFolders.delete(folder);
+                        caret.textContent = nowCollapsed ? '▶' : '▼';
+                    });
+
+                    group.appendChild(header);
+                    group.appendChild(list);
+                    container.appendChild(group);
+                });
             }
 
             function showResults() {
@@ -589,44 +856,19 @@
                     grouped[folder] = [];
                 });
 
+                discoveredByPath = {};
                 images.forEach((image, index) => {
                     const folder = assignments[index] || 'uncategorized';
                     if (!grouped[folder]) grouped[folder] = [];
                     grouped[folder].push(image);
-                });
-
-                const sectionsEl = document.getElementById('resultsSections');
-                sectionsEl.innerHTML = '';
-
-                folders.forEach(folder => {
-                    const files = grouped[folder] || [];
-                    if (files.length === 0) return;
-
-                    const section = document.createElement('div');
-                    section.className = `results-section ${folder}`;
-
-                    const heading = document.createElement('h3');
-                    if (folder === 'uncategorized') {
-                        heading.textContent = `uncategorized (${files.length}) — staying put`;
-                    } else if (folder === 'trash') {
-                        heading.textContent = `trash (${files.length}) — delete`;
-                    } else {
-                        heading.textContent = `${folder} (${files.length})`;
-                    }
-                    section.appendChild(heading);
-
-                    const list = document.createElement('ul');
-                    list.className = 'file-list';
-                    files.forEach(file => {
-                        const li = document.createElement('li');
-                        li.textContent = file;
-                        list.appendChild(li);
-                    });
-                    section.appendChild(list);
-                    sectionsEl.appendChild(section);
+                    discoveredByPath[image] = discovered[index] || 'uncategorized';
                 });
 
                 groupedFiles = grouped;
+                checkedPaths = new Set(images);
+                collapsedFolders = new Set();
+
+                renderChecklist();
 
                 document.getElementById('sorter').style.display = 'none';
                 document.getElementById('results').style.display = 'block';
@@ -634,7 +876,7 @@
                 document.getElementById('tabPosix').onclick = () => selectVariant('posix');
                 document.getElementById('tabMacos').onclick = () => selectVariant('macos');
 
-                selectVariant(isMacOS() ? 'macos' : 'posix');
+                selectVariant(isMacPlatform() ? 'macos' : 'posix');
             }
 
             /**
@@ -690,10 +932,20 @@
             document.addEventListener('keydown', e => {
                 if (document.getElementById('results').style.display !== 'none') return;
 
-                if (e.key >= '1' && e.key <= '9') {
+                if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key >= '1' && e.key <= '9') {
                     e.preventDefault();
                     assignByDigit(Number(e.key));
                     return;
+                }
+
+                if (/^[a-z]$/i.test(e.key)) {
+                    const wantMod = isMacPlatform() ? e.metaKey : e.ctrlKey;
+                    const otherMod = isMacPlatform() ? e.ctrlKey : e.metaKey;
+                    if (wantMod && !otherMod && !e.altKey) {
+                        e.preventDefault();
+                        assignByIndex(9 + (e.key.toLowerCase().charCodeAt(0) - 97));
+                        return;
+                    }
                 }
 
                 switch (e.key) {
